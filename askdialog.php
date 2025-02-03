@@ -25,14 +25,33 @@ class AskDialog extends Module
         $this->bootstrap = true;
     }
 
+    private function createTables()
+    {
+        //Create table to store all the products remaining to add to JSON file before sending it to AskDialog S3 server as a batch
+        $sql = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'askdialog_product` (
+            `id_askdialog_product` int(11) NOT NULL AUTO_INCREMENT,
+            `id_product` int(11) NOT NULL,
+            `id_shop` int(11) NOT NULL,
+            `date_add` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id_askdialog_product`)
+        ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
+        return Db::getInstance()->execute($sql);
+    }
+
+    private function dropTables()
+    {
+        $sql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . 'askdialog_product`';
+        return Db::getInstance()->execute($sql);
+    }
+
     public function install()
     {
-        return parent::install() && $this->registerHook('displayHeader') && $this->registerHook('displayFooterAfter') && $this->registerHook('displayProductAdditionalInfo');
+        return parent::install() && $this->registerHook('displayHeader') && $this->registerHook('displayFooterAfter') && $this->registerHook('displayProductAdditionalInfo') && $this->createTables();
     }
 
     public function uninstall()
     {
-        return parent::uninstall();
+        return parent::uninstall() && $this->dropTables();
     }
 
     public function hookDisplayHeader($params)
@@ -41,6 +60,17 @@ class AskDialog extends Module
             $this->context->controller->addCSS($this->_path . 'views/css/cssForProductPage.css', 'all');
         }
         $this->context->controller->addCSS($this->_path . 'views/css/cssForAllPages.css', 'all');
+
+        //Add JS
+        $this->context->controller->addJS($this->_path . 'views/js/setupModal.js');
+
+        //Si page produit
+        if ($this->context->controller->php_self == 'product') {
+            $this->context->controller->addJS($this->_path . 'views/js/instant.js');
+        }
+        else {
+            $this->context->controller->addJS($this->_path . 'views/js/ai-input.js');
+        }
        
     }
 
@@ -70,8 +100,8 @@ class AskDialog extends Module
             'assistant_name' => $assistant_name,
             'assistant_description' => $assistant_description,
             'ask_anything_placeholder' => $ask_anything_placeholder,
-            'enableProductQuestion' => Configuration::get('PS_ENABLE_PRODUCT_QUESTION'),
-            'defaultDesign' => Configuration::get('PS_DEFAULT_DESIGN'),
+            'enableProductQuestion' => Configuration::get('ASKDIALOG_ENABLE_PRODUCT_QUESTION'),
+            'defaultDesign' => Configuration::get('ASKDIALOG_DEFAULT_DESIGN'),
             'my_array' => ['suggestion-0', 'suggestion-1']
         ]);
 
@@ -89,14 +119,13 @@ class AskDialog extends Module
         $countryCode = $this->context->country->iso_code;
         $languageCode = $this->context->language->iso_code;
         $languageName = $this->context->language->name;
-        $primaryColor = Configuration::get('PS_COLOR_PRIMARY');
-        $backgroundColor = Configuration::get('PS_COLOR_BACKGROUND');
-        $ctaTextColor = Configuration::get('PS_COLOR_CTA_TEXT');
-        $ctaBorderType = Configuration::get('PS_CTA_BORDER_TYPE');
-        $capitalizeCtas = Configuration::get('PS_CAPITALIZE_CTAS');
-        $fontFamily = Configuration::get('PS_FONT_FAMILY');
-        $highlightProductName = Configuration::get('PS_HIGHLIGHT_PRODUCT_NAME');
-        $dataJsSrc = Configuration::get('PS_DATA_JS_SRC');
+        $primaryColor = Configuration::get('ASKDIALOG_COLOR_PRIMARY');
+        $backgroundColor = Configuration::get('ASKDIALOG_COLOR_BACKGROUND');
+        $ctaTextColor = Configuration::get('ASKDIALOG_COLOR_CTA_TEXT');
+        $ctaBorderType = Configuration::get('ASKDIALOG_CTA_BORDER_TYPE');
+        $capitalizeCtas = Configuration::get('ASKDIALOG_CAPITALIZE_CTAS');
+        $fontFamily = Configuration::get('ASKDIALOG_FONT_FAMILY');
+        $highlightProductName = Configuration::get('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME');
 
         $this->context->smarty->assign([
             'public_api_key' => $publicApiKey,
@@ -109,8 +138,7 @@ class AskDialog extends Module
             'cta_border_type' => $ctaBorderType,
             'capitalize_ctas' => $capitalizeCtas,
             'font_family' => $fontFamily,
-            'highlight_product_name' => $highlightProductName,
-            'data_js_src' => $dataJsSrc,
+            'highlight_product_name' => $highlightProductName
         ]);
         return $this->display(__FILE__, 'views/templates/hook/displayfooterafter.tpl');
 
@@ -121,10 +149,28 @@ class AskDialog extends Module
         $output = '';
         if (Tools::isSubmit('submit' . $this->name)) {
             $apiKey = strval(Tools::getValue('ASKDIALOG_API_KEY'));
+            $primaryColor = strval(Tools::getValue('ASKDIALOG_COLOR_PRIMARY'));
+            $backgroundColor = strval(Tools::getValue('ASKDIALOG_COLOR_BACKGROUND'));
+            $ctaTextColor = strval(Tools::getValue('ASKDIALOG_COLOR_CTA_TEXT'));
+            $ctaBorderType = strval(Tools::getValue('ASKDIALOG_CTA_BORDER_TYPE'));
+            $capitalizeCtas = strval(Tools::getValue('ASKDIALOG_CAPITALIZE_CTAS'));
+            $fontFamily = strval(Tools::getValue('ASKDIALOG_FONT_FAMILY'));
+            $highlightProductName = strval(Tools::getValue('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME'));
+            $batchSize = strval(Tools::getValue('ASKDIALOG_BATCH_SIZE'));
+
             if (!$apiKey || empty($apiKey)) {
                 $output .= $this->displayError($this->trans('Invalid API Key', [], 'Modules.AskDialog.Admin'));
             } else {
                 Configuration::updateValue('ASKDIALOG_API_KEY', $apiKey);
+                Configuration::updateValue('ASKDIALOG_COLOR_PRIMARY', $primaryColor);
+                Configuration::updateValue('ASKDIALOG_COLOR_BACKGROUND', $backgroundColor);
+                Configuration::updateValue('ASKDIALOG_COLOR_CTA_TEXT', $ctaTextColor);
+                Configuration::updateValue('ASKDIALOG_CTA_BORDER_TYPE', $ctaBorderType);
+                Configuration::updateValue('ASKDIALOG_CAPITALIZE_CTAS', $capitalizeCtas);
+                Configuration::updateValue('ASKDIALOG_FONT_FAMILY', $fontFamily);
+                Configuration::updateValue('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME', $highlightProductName);
+                Configuration::updateValue('ASKDIALOG_BATCH_SIZE', $batchSize);
+
                 $output .= $this->displayConfirmation($this->trans('Settings updated', [], 'Modules.AskDialog.Admin'));
                 $apiClient = new AskDialogClient($apiKey);
                 $result = $apiClient->sendDomainHost();
@@ -141,22 +187,100 @@ class AskDialog extends Module
     {
         $fieldsForm = [
             'form' => [
-                'legend' => [
-                    'title' => $this->trans('Settings', [], 'Modules.AskDialog.Admin'),
-                    'icon' => 'icon-cogs',
+            'legend' => [
+                'title' => $this->trans('Settings', [], 'Modules.AskDialog.Admin'),
+                'icon' => 'icon-cogs',
+            ],
+            'input' => [
+                [
+                'type' => 'text',
+                'label' => $this->trans('API Key', [], 'Modules.AskDialog.Admin'),
+                'name' => 'ASKDIALOG_API_KEY',
+                'size' => 20,
+                'required' => true,
                 ],
-                'input' => [
+                [
+                'type' => 'color',
+                'label' => $this->trans('Primary Color', [], 'Modules.AskDialog.Admin'),
+                'name' => 'ASKDIALOG_COLOR_PRIMARY',
+                'size' => 20,
+                'required' => true,
+                ],
+                [
+                'type' => 'color',
+                'label' => $this->trans('Background Color', [], 'Modules.AskDialog.Admin'),
+                'name' => 'ASKDIALOG_COLOR_BACKGROUND',
+                'size' => 20,
+                'required' => true,
+                ],
+                [
+                'type' => 'color',
+                'label' => $this->trans('CTA Text Color', [], 'Modules.AskDialog.Admin'),
+                'name' => 'ASKDIALOG_COLOR_CTA_TEXT',
+                'size' => 20,
+                'required' => true,
+                ],
+                [
+                'type' => 'text',
+                'label' => $this->trans('CTA Border Type', [], 'Modules.AskDialog.Admin'),
+                'name' => 'ASKDIALOG_CTA_BORDER_TYPE',
+                'size' => 20,
+                'required' => true,
+                ],
+                [
+                'type' => 'switch',
+                'label' => $this->trans('Capitalize CTAs', [], 'Modules.AskDialog.Admin'),
+                'name' => 'ASKDIALOG_CAPITALIZE_CTAS',
+                'is_bool' => true,
+                'values' => [
                     [
-                        'type' => 'text',
-                        'label' => $this->trans('API Key', [], 'Modules.AskDialog.Admin'),
-                        'name' => 'ASKDIALOG_API_KEY',
-                        'size' => 20,
-                        'required' => true,
+                    'id' => 'active_on',
+                    'value' => 1,
+                    'label' => $this->trans('Enabled', [], 'Admin.Global')
                     ],
+                    [
+                    'id' => 'active_off',
+                    'value' => 0,
+                    'label' => $this->trans('Disabled', [], 'Admin.Global')
+                    ]
                 ],
-                'submit' => [
-                    'title' => $this->trans('Save', [], 'Admin.Actions'),
                 ],
+                [
+                'type' => 'text',
+                'label' => $this->trans('Font Family', [], 'Modules.AskDialog.Admin'),
+                'name' => 'ASKDIALOG_FONT_FAMILY',
+                'size' => 20,
+                'required' => true,
+                ],
+                [
+                'type' => 'switch',
+                'label' => $this->trans('Highlight Product Name', [], 'Modules.AskDialog.Admin'),
+                'name' => 'ASKDIALOG_HIGHLIGHT_PRODUCT_NAME',
+                'is_bool' => true,
+                'values' => [
+                    [
+                    'id' => 'active_on',
+                    'value' => 1,
+                    'label' => $this->trans('Enabled', [], 'Admin.Global')
+                    ],
+                    [
+                    'id' => 'active_off',
+                    'value' => 0,
+                    'label' => $this->trans('Disabled', [], 'Admin.Global')
+                    ]
+                ],
+                ],
+                [
+                    'type' => 'text',
+                    'label' => $this->trans('Batch Size', [], 'Modules.AskDialog.Admin'),
+                    'name' => 'ASKDIALOG_BATCH_SIZE',
+                    'size' => 20,
+                    'required' => true,
+                ],
+            ],
+            'submit' => [
+                'title' => $this->trans('Save', [], 'Admin.Actions'),
+            ],
             ],
         ];
 
@@ -182,6 +306,14 @@ class AskDialog extends Module
     {
         return [
             'ASKDIALOG_API_KEY' => Configuration::get('ASKDIALOG_API_KEY', ''),
+            'ASKDIALOG_COLOR_PRIMARY' => Configuration::get('ASKDIALOG_COLOR_PRIMARY', ''),
+            'ASKDIALOG_COLOR_BACKGROUND' => Configuration::get('ASKDIALOG_COLOR_BACKGROUND', ''),
+            'ASKDIALOG_COLOR_CTA_TEXT' => Configuration::get('ASKDIALOG_COLOR_CTA_TEXT', ''),
+            'ASKDIALOG_CTA_BORDER_TYPE' => Configuration::get('ASKDIALOG_CTA_BORDER_TYPE', ''),
+            'ASKDIALOG_CAPITALIZE_CTAS' => Configuration::get('ASKDIALOG_CAPITALIZE_CTAS', false),
+            'ASKDIALOG_FONT_FAMILY' => Configuration::get('ASKDIALOG_FONT_FAMILY', ''),
+            'ASKDIALOG_HIGHLIGHT_PRODUCT_NAME' => Configuration::get('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME', false),
+            'ASKDIALOG_BATCH_SIZE' => Configuration::get('ASKDIALOG_BATCH_SIZE', 10)
         ];
     }
 }

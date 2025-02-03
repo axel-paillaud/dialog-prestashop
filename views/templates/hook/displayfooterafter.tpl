@@ -12,7 +12,6 @@
     data-capitalize-ctas="{$capitalize_ctas}"
     data-font-family="{$font_family}"
     data-highlight-product-name="{$highlight_product_name}"></div>
-<div id="dialog-script" data-src="{$data_js_src}"></div>
 
 <script>
     Object.assign(window, {
@@ -27,3 +26,5 @@
         }
     });
 </script>
+
+<script src="https://d2zm7i5bmzo6ze.cloudfront.net/assets/index.js"></script>
