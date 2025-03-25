@@ -63,7 +63,7 @@ class DataGenerator{
                     "url" => $linkObj->getImageLink($productObj->link_rewrite[$defaultLang], $image->id)
                 ];
             }else{
-                $variant['image'] = [];
+                $variant['image'] = null;
             }
 
 
