@@ -38,7 +38,7 @@ class AskDialogClient{
             'Content-Type' => 'application/json',
         ];
 
-        $body = json_encode(['domain' => Context::getContext()->shop->domain]);
+        $body = json_encode(['domain' => Context::getContext()->shop->domain, 'version' => _PS_VERSION_]);
         
 
         try {

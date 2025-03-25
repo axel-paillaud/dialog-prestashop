@@ -243,7 +243,14 @@ class AskDialog extends Module
                     'name' => 'ASKDIALOG_API_KEY',
                     'size' => 20,
                     'required' => true,
+                    ],
+                    //add a link to dialog onboarding
+                    [
+                        'type' => 'html',
+                        'name' => 'askdialog_onboarding',
+                        'html_content' => '<a href="https://app.askdialog.com/onboarding" target="_blank" class="btn btn-info">Go to AskDialog onboarding</a>'
                     ]
+                    
                 ],
                 'submit' => [
                     'title' => $this->trans('Save', [], 'Admin.Actions'),
