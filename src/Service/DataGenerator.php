@@ -109,10 +109,12 @@ class DataGenerator{
         foreach ($categories as $categoryId) {
             $category = new Category($categoryId, $defaultLang);
             
-            $categoryItems[] = [
-                "description" => $category->description,
-                "title" => $category->name
-            ];
+            if ($category->description !== null && $category->name !== null) {
+                $categoryItems[] = [
+                    "description" => $category->description,
+                    "title" => $category->name
+                ];
+            }
         }
 
         $productItem["categories"] = $categoryItems;
