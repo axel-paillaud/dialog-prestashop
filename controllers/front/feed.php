@@ -58,6 +58,31 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
         $batchSize = Configuration::get('ASKDIALOG_BATCH_SIZE');
 
         switch ($action) {
+            case 'sendAsyncCatalogData':
+                // Call the sendCatalogData action asynchronously
+                try {
+                    $url = $this->context->link->getModuleLink('askdialog', 'feed', ['action' => 'sendCatalogData']);
+                    $client = new Client(['verify' => false]);
+                    $response = $client->postAsync($url, [
+                        'headers' => [
+                            'Authorization' => 'Token ' . Configuration::get('ASKDIALOG_API_KEY'),
+                        ],
+                    ])->then(
+                        function ($response) {
+                            return $response->getBody()->getContents();
+                        },
+                        function ($exception) {
+                            throw new Exception('Error during async request: ' . $exception->getMessage());
+                        }
+                    )->wait();
+
+                    $response = array('status' => 'success', 'message' => 'Async catalog data sent successfully', 'response' => $response);
+                    die(json_encode($response));
+                } catch (Exception $e) {
+                    http_response_code(500); // Internal Server Error
+                    $response = array('status' => 'error', 'message' => 'Exception while sending async data: ' . $e->getMessage());
+                    die(json_encode($response));
+                }
             case 'sendCatalogData':
                 $numRemaining = $dataGenerator->getNumCatalogRemaining(Configuration::get('PS_SHOP_DEFAULT'));
                 $dataCatalog = $dataGenerator->getCatalogDataForBatch($batchSize, Configuration::get('PS_SHOP_DEFAULT'));
