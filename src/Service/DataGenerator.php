@@ -183,8 +183,8 @@ class DataGenerator{
         $productItem["metafields"] = [];
         foreach ($productFeatures as $feature) {
             $productItem["metafields"][] = [
-                "name" => $feature['name'],
-                "value" => $feature['value']
+            "name" => $feature['name'],
+            "value" => $feature['value'] !== null ? $feature['value'] : ""
             ];
         }
         if($productItem['totalVariants']>0){
