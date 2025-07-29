@@ -45,6 +45,11 @@ class DataGenerator{
 
     public function getProductData($product_id, $defaultLang, $linkObj, $countryCode = 'fr') {
         $productObj = new Product((int)$product_id);
+
+        if (!Validate::isLoadedObject($productObj)) {
+			return [];
+		}
+
         $productItem = [];
         $publishedAt = (new \DateTime($productObj->date_add))->format('Y-m-d\TH:i:s\Z');
         $productItem["publishedAt"] = $publishedAt;
@@ -221,7 +226,10 @@ class DataGenerator{
 
         $linkObj = new Link();
         foreach($products as $product){
-            $this->products[] = $this->getProductData($product['id_product'], $defaultLang, $linkObj);
+            if (!empty($productData = $this->getProductData($product['id_product'], $defaultLang, $linkObj))) {
+                $this->products[] = $productData;
+			}
+
         }
         return $this->products;
     }
