@@ -211,7 +211,6 @@ class DataGenerator{
             if (!empty($productData = $this->getProductData($product['id_product'], $defaultLang, $linkObj))) {
 		        $this->products[] = $productData;
 	        }
-
         }
         return $this->products;
     }
