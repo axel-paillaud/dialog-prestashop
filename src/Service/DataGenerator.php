@@ -1,4 +1,24 @@
 <?php
+/*
+* 2007-2025 Dialog
+*
+* NOTICE OF LICENSE
+*
+* This source file is subject to the Academic Free License (AFL 3.0)
+* that is bundled with this package in the file LICENSE.txt.
+* It is also available through the world-wide-web at this URL:
+* http://opensource.org/licenses/afl-3.0.php
+*
+* DISCLAIMER
+*
+* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+* versions in the future. If you wish to customize PrestaShop for your
+* needs please refer to http://www.prestashop.com for more information.
+*
+*  @author Axel Paillaud <contact@axelweb.fr>
+*  @copyright  2007-2025 Dialog
+*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+*/
 
 namespace Dialog\AskDialog\Service;
 
@@ -88,7 +108,7 @@ class DataGenerator{
             $productItem['totalVariants'] = count($productAttributes);
         }
 
-        //Retrieve variants 
+        //Retrieve variants
         $combinations = $productObj->getAttributeCombinations($defaultLang, false);
         $productItem['totalVariants'] = count($combinations);
 
@@ -97,7 +117,7 @@ class DataGenerator{
 
             $productAttributeObj = new Combination((int)$productAttribute);
             $variant = [];
-            
+
 
             $images = Product::_getAttributeImageAssociations($productAttribute["id_product_attribute"]);
             if(count($images)>0){
@@ -117,7 +137,7 @@ class DataGenerator{
             $variant["title"] = $variant["displayName"];
             $stockAvailableCombinationObj = new StockAvailable(StockAvailable::getStockAvailableIdByProductId($productObj->id, $productAttribute["id_product_attribute"]));
             $variant["inventoryQuantity"] = (int)$stockAvailableCombinationObj->quantity;
-            
+
             if($taxCalculator != null){
                 $variant["price"] = $taxCalculator->addTaxes(Product::getPriceStatic($productObj->id, true, $productAttribute['id_product_attribute'], 2, null, false, true)); // With reductions (computed)
             }else{
@@ -154,7 +174,7 @@ class DataGenerator{
             if($image['cover'] != null && $image['cover']=='1'){
                 $productItem['featuredImage'] = ['url'=>$linkImage];
             }
-            $images[] = ['url'=>$linkImage];           
+            $images[] = ['url'=>$linkImage];
         }
         $productItem["images"] = $images;
         $stockAvailableObj = new StockAvailable(StockAvailable::getStockAvailableIdByProductId($productObj->id));
@@ -167,7 +187,7 @@ class DataGenerator{
 
         foreach ($categories as $categoryId) {
             $category = new Category($categoryId, $defaultLang);
-            
+
             if ($category->description !== null && $category->name !== null) {
                 $categoryItems[] = [
                     "description" => $category->description,
@@ -205,7 +225,7 @@ class DataGenerator{
     {
         //Retrieve from the askdialog_product table the ids to process
         $products = Db::getInstance()->executeS('SELECT * FROM ' . _DB_PREFIX_ . 'askdialog_product WHERE id_shop = ' . $idShop . ' LIMIT ' . $batchSize);
-        $defaultLang = (int) Configuration::get('PS_LANG_DEFAULT'); 
+        $defaultLang = (int) Configuration::get('PS_LANG_DEFAULT');
         $linkObj = new Link();
         foreach($products as $product){
             if (!empty($productData = $this->getProductData($product['id_product'], $defaultLang, $linkObj))) {

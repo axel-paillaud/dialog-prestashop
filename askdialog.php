@@ -1,4 +1,24 @@
 <?php
+/*
+* 2007-2025 Dialog
+*
+* NOTICE OF LICENSE
+*
+* This source file is subject to the Academic Free License (AFL 3.0)
+* that is bundled with this package in the file LICENSE.txt.
+* It is also available through the world-wide-web at this URL:
+* http://opensource.org/licenses/afl-3.0.php
+*
+* DISCLAIMER
+*
+* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+* versions in the future. If you wish to customize PrestaShop for your
+* needs please refer to http://www.prestashop.com for more information.
+*
+*  @author Axel Paillaud <contact@axelweb.fr>
+*  @copyright  2007-2025 Dialog
+*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+*/
 
 if (!defined('_PS_VERSION_')) {
     exit;
@@ -172,7 +192,7 @@ class AskDialog extends Module
 
     public function hookDisplayFooterAfter($params)
     {
-        //Include view 
+        //Include view
         $this->context->smarty->assign('module_dir', $this->_path);
         $customer = $this->context->customer;
         $customerId = $customer->isLogged() ? $customer->id : 'anonymous';
@@ -210,7 +230,7 @@ class AskDialog extends Module
     public function getContent()
     {
         $output = '';
-        
+
         //Si on est a l'étape 1 on affiche le formulaire de configuration des API Keys
         if (Tools::getValue('test') == null && (Tools::getValue('step') == 1 || Tools::getValue('step') == null)) {
             if (Tools::isSubmit('submit' . $this->name)) {
@@ -223,7 +243,7 @@ class AskDialog extends Module
                     Configuration::updateValue('ASKDIALOG_API_KEY', $apiKey);
                     Configuration::updateValue('ASKDIALOG_API_KEY_PUBLIC', $apiKeyPublic);
                     Configuration::updateValue('ASKDIALOG_ENABLE_PRODUCT_HOOK', $enableProductHook);
-    
+
                     $output .= $this->displayConfirmation($this->trans('Settings updated', [], 'Modules.AskDialog.Admin'));
                     $apiClient = new AskDialogClient($apiKey);
                     $result = $apiClient->sendDomainHost();
@@ -245,7 +265,7 @@ class AskDialog extends Module
                 $fontFamily = strval(Tools::getValue('ASKDIALOG_FONT_FAMILY'));
                 $highlightProductName = strval(Tools::getValue('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME'));
                 $batchSize = strval(Tools::getValue('ASKDIALOG_BATCH_SIZE'));
-    
+
                 Configuration::updateValue('ASKDIALOG_COLOR_PRIMARY', $primaryColor);
                 Configuration::updateValue('ASKDIALOG_COLOR_BACKGROUND', $backgroundColor);
                 Configuration::updateValue('ASKDIALOG_COLOR_CTA_TEXT', $ctaTextColor);
@@ -262,7 +282,7 @@ class AskDialog extends Module
 
     protected function renderFormApiKeys()
     {
-        $fieldsForm = 
+        $fieldsForm =
         [
             'form' => [
                 'legend' => [
@@ -309,7 +329,7 @@ class AskDialog extends Module
                         'name' => 'askdialog_onboarding',
                         'html_content' => '<a href="https://app.askdialog.com/onboarding" target="_blank" class="btn btn-info">Go to AskDialog onboarding</a>'
                     ]
-                    
+
                 ],
                 'submit' => [
                     'title' => $this->trans('Save', [], 'Admin.Actions'),
