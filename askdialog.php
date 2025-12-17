@@ -39,15 +39,16 @@ class AskDialog extends Module
         $this->author = 'AskDialog';
         $this->need_instance = 0;
 
-        parent::__construct();
-
-        $this->displayName = $this->trans('Ask Dialog', [], 'Modules.Askdialog.Admin');
-        $this->description =  $this->trans('Module to provide the AskDialog assistant on your e-shop', [], 'Modules.Askdialog.Admin');
         $this->ps_versions_compliancy = [
             'min' => '1.7.8',
             'max' => '8.99.99'
         ];
         $this->bootstrap = true;
+
+        parent::__construct();
+
+        $this->displayName = $this->trans('Ask Dialog', [], 'Modules.Askdialog.Admin');
+        $this->description =  $this->trans('Module to provide the AskDialog assistant on your e-shop', [], 'Modules.Askdialog.Admin');
     }
 
     private function createTables()
