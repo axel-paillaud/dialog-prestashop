@@ -69,7 +69,7 @@ class AskDialog extends Module
     public function install()
     {
         return parent::install()
-            && $this->registerHook('displayHeader')
+            && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('displayFooterAfter')
             && $this->registerHook('displayProductAdditionalInfo')
             && $this->registerHook('actionFrontControllerInitBefore')
@@ -107,33 +107,89 @@ class AskDialog extends Module
     }
 
 
-    public function hookDisplayHeader($params)
+    public function hookActionFrontControllerSetMedia()
     {
+        // Register CSS files
         if ($this->context->controller->php_self == 'product') {
-            $this->context->controller->addCSS($this->_path . 'views/css/cssForProductPage.css', 'all');
+            $this->context->controller->registerStylesheet(
+                'module-askdialog-product-style',
+                'modules/' . $this->name . '/views/css/cssForProductPage.css',
+                [
+                    'media' => 'all',
+                    'priority' => 200,
+                ]
+            );
         }
-        $this->context->controller->addCSS($this->_path . 'views/css/cssForAllPages.css', 'all');
 
-        //$this->context->controller->addJS($this->_path . 'views/js/index.js');
-        //Add JS
-        $this->context->controller->addJS($this->_path . 'views/js/setupModal.js');
+        $this->context->controller->registerStylesheet(
+            'module-askdialog-global-style',
+            'modules/' . $this->name . '/views/css/cssForAllPages.css',
+            [
+                'media' => 'all',
+                'priority' => 200,
+            ]
+        );
 
-        //Si page produit
+        // Register JS files
+        $this->context->controller->registerJavascript(
+            'module-askdialog-setupmodal',
+            'modules/' . $this->name . '/views/js/setupModal.js',
+            [
+                'position' => 'bottom',
+                'priority' => 200,
+            ]
+        );
+
+        // Load specific JS for product pages
         if ($this->context->controller->php_self == 'product') {
-            $this->context->controller->addJS($this->_path . 'views/js/instant.js');
-        }
-        else {
-            $this->context->controller->addJS($this->_path . 'views/js/ai-input.js');
+            $this->context->controller->registerJavascript(
+                'module-askdialog-instant',
+                'modules/' . $this->name . '/views/js/instant.js',
+                [
+                    'position' => 'bottom',
+                    'priority' => 200,
+                ]
+            );
+        } else {
+            $this->context->controller->registerJavascript(
+                'module-askdialog-ai-input',
+                'modules/' . $this->name . '/views/js/ai-input.js',
+                [
+                    'position' => 'bottom',
+                    'priority' => 200,
+                ]
+            );
         }
 
-        $this->context->controller->addJS($this->_path . 'views/js/askdialog.js');
-        $this->context->controller->addJS($this->_path . 'views/js/posthog.js');
+        $this->context->controller->registerJavascript(
+            'module-askdialog-main',
+            'modules/' . $this->name . '/views/js/askdialog.js',
+            [
+                'position' => 'bottom',
+                'priority' => 200,
+            ]
+        );
 
-        //Si on est sur la page de confirmation de commande, on ajoute le JS pour le formulaire de feedback
+        $this->context->controller->registerJavascript(
+            'module-askdialog-posthog',
+            'modules/' . $this->name . '/views/js/posthog.js',
+            [
+                'position' => 'bottom',
+                'priority' => 200,
+            ]
+        );
+
+        // Load PostHog order confirmation script on order confirmation page
         if ($this->context->controller->php_self == 'order-confirmation') {
-            $this->context->controller->addJS($this->_path . 'views/js/posthog_order_confirmation.js');
+            $this->context->controller->registerJavascript(
+                'module-askdialog-posthog-order',
+                'modules/' . $this->name . '/views/js/posthog_order_confirmation.js',
+                [
+                    'position' => 'bottom',
+                    'priority' => 200,
+                ]
+            );
         }
-
     }
 
     public function hookDisplayOrderConfirmation($params)
