@@ -110,7 +110,7 @@ class AskDialog extends Module
     public function hookActionFrontControllerSetMedia()
     {
         // Register CSS files
-        if ($this->context->controller->php_self == 'product') {
+        if ($this->context->controller instanceof \ProductController) {
             $this->context->controller->registerStylesheet(
                 'module-askdialog-product-style',
                 'modules/' . $this->name . '/views/css/cssForProductPage.css',
@@ -141,7 +141,7 @@ class AskDialog extends Module
         );
 
         // Load specific JS for product pages
-        if ($this->context->controller->php_self == 'product') {
+        if ($this->context->controller instanceof \ProductController) {
             $this->context->controller->registerJavascript(
                 'module-askdialog-instant',
                 'modules/' . $this->name . '/views/js/instant.js',
@@ -180,7 +180,7 @@ class AskDialog extends Module
         );
 
         // Load PostHog order confirmation script on order confirmation page
-        if ($this->context->controller->php_self == 'order-confirmation') {
+        if ($this->context->controller instanceof \OrderConfirmationController) {
             $this->context->controller->registerJavascript(
                 'module-askdialog-posthog-order',
                 'modules/' . $this->name . '/views/js/posthog_order_confirmation.js',
@@ -209,9 +209,8 @@ class AskDialog extends Module
 
     public function hookDisplayProductAdditionalInfo($params)
     {
-
         // Ensure the hook is only executed on product pages
-        if ($this->context->controller->php_self !== 'product') {
+        if (!$this->context->controller instanceof \ProductController) {
             return;
         }
 
