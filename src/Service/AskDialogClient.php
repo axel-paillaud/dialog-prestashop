@@ -42,7 +42,6 @@ class AskDialogClient{
             throw new \Exception('Config file config.yml not found');
         }
 
-        // Parse YAML file
         $config = Yaml::parseFile($yamlFile);
         return $config['askdialog']['settings']['api_url'];
     }
