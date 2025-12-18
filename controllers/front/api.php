@@ -109,29 +109,36 @@ class AskDialogApiModuleFrontController extends ModuleFrontController
     /**
      * Handles getProductData action
      * Returns single product data with language and country context
+     * 
+     * Uses current context (language/country) by default
+     * Can be overridden with country_code and locale parameters
      *
      * @param DataGenerator $dataGenerator
      */
     private function handleGetProductData($dataGenerator)
     {
         $productId = (int)Tools::getValue('id');
-        $countryCode = Tools::getValue('country_code', 'fr');
-        $locale = Tools::getValue('locale');
         
-        // Determine language ID
-        $defaultLang = (int)Configuration::get('PS_LANG_DEFAULT');
+        // Use context language and country by default
+        $idLang = (int)$this->context->language->id;
+        $countryCode = $this->context->country->iso_code;
         
-        if (empty($countryCode) || empty($locale)) {
-            $idLang = $defaultLang;
-        } else {
-            $idLang = Language::getIdByLocale($countryCode . '-' . $locale);
+        // Allow override via parameters (for Dialog AI API calls)
+        $paramLocale = Tools::getValue('locale');
+        $paramCountryCode = Tools::getValue('country_code');
+        
+        if (!empty($paramCountryCode) && !empty($paramLocale)) {
+            // Override with API parameters if provided
+            $idLang = Language::getIdByLocale($paramCountryCode . '-' . $paramLocale);
             
             if (!$idLang) {
                 $this->sendJsonResponse([
                     'status' => 'error',
-                    'message' => 'Invalid country code or locale'
+                    'message' => 'Invalid country code or locale: ' . $paramCountryCode . '-' . $paramLocale
                 ], 400);
             }
+            
+            $countryCode = $paramCountryCode;
         }
         
         // Get product data
