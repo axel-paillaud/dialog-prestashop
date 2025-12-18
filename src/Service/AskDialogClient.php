@@ -46,7 +46,7 @@ class AskDialogClient
     /**
      * @var string Base URL of Dialog API
      */
-    private $urlApi;
+    private $apiUrl;
 
     /**
      * @var HttpClientInterface Symfony HTTP client instance
@@ -61,25 +61,20 @@ class AskDialogClient
     public function __construct(string $apiKey)
     {
         $this->apiKey = $apiKey;
-        $this->urlApi = $this->getApiUrl();
+
+        $this->apiUrl = Configuration::get('ASKDIALOG_API_URL');
+        if (empty($this->apiUrl)) {
+            throw new \Exception('ASKDIALOG_API_URL configuration is missing');
+        }
+
         $this->httpClient = HttpClient::create([
-            'base_uri' => $this->urlApi,
+            'base_uri' => $this->apiUrl,
             'headers' => [
                 'Authorization' => $this->apiKey,
                 'Content-Type' => 'application/json',
             ],
             'timeout' => 30,
         ]);
-    }
-
-    /**
-     * Retrieves Dialog API URL from PrestaShop configuration
-     *
-     * @return string API base URL
-     */
-    private function getApiUrl(): string
-    {
-        $apiUrl = Configuration::get('ASKDIALOG_API_URL');
     }
 
     /**
