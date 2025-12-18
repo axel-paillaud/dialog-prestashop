@@ -1,11 +1,33 @@
 <?php
+/*
+* 2007-2025 Dialog
+*
+* NOTICE OF LICENSE
+*
+* This source file is subject to the Academic Free License (AFL 3.0)
+* that is bundled with this package in the file LICENSE.txt.
+* It is also available through the world-wide-web at this URL:
+* http://opensource.org/licenses/afl-3.0.php
+*
+* DISCLAIMER
+*
+* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+* versions in the future. If you wish to customize PrestaShop for your
+* needs please refer to http://www.prestashop.com for more information.
+*
+*  @author Axel Paillaud <contact@axelweb.fr>
+*  @copyright  2007-2025 Dialog
+*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+*/
 
 if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-use LouisAuthie\Askdialog\Service\AskDialogClient;
-use LouisAuthie\Askdialog\Service\DataGenerator;
+require_once __DIR__ . '/vendor/autoload.php';
+
+use Dialog\AskDialog\Service\AskDialogClient;
+use Dialog\AskDialog\Service\DataGenerator;
 
 class AskDialog extends Module
 {
@@ -16,43 +38,41 @@ class AskDialog extends Module
         $this->version = '1.0.0';
         $this->author = 'AskDialog';
         $this->need_instance = 0;
+        $this->ps_versions_compliancy = [
+            'min' => '1.7.8',
+            'max' => '8.99.99'
+        ];
+        $this->bootstrap = true;
 
         parent::__construct();
 
-        $this->displayName = $this->trans('Ask Dialog', [], 'Modules.AskDialog.Admin');
-        $this->description =  $this->trans('Module to provide the AskDialog assistant on your e-shop', [], 'Modules.AskDialog.Admin');
-        $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
-        $this->bootstrap = true;
+        $this->displayName = $this->trans('Ask Dialog', [], 'Modules.Askdialog.Admin');
+        $this->description =  $this->trans('Module to provide the AskDialog assistant on your e-shop', [], 'Modules.Askdialog.Admin');
     }
 
-    private function createTables()
+    protected function installDb(): bool
     {
-        //Create table to store all the products remaining to add to JSON file before sending it to AskDialog S3 server as a batch
-        $sql = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'askdialog_product` (
-            `id_askdialog_product` int(11) NOT NULL AUTO_INCREMENT,
-            `id_product` int(11) NOT NULL,
-            `id_shop` int(11) NOT NULL,
-            `date_add` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id_askdialog_product`)
-        ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
-        return Db::getInstance()->execute($sql);
+        $file = __DIR__ . '/sql/install.php';
+
+        return is_file($file) ? (bool) require $file : false;
     }
 
-    private function dropTables()
+    protected function uninstallDb(): bool
     {
-        $sql = 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . 'askdialog_product`';
-        return Db::getInstance()->execute($sql);
+        $file = __DIR__ . '/sql/uninstall.php';
+
+        return is_file($file) ? (bool) require $file : false;
     }
 
     public function install()
     {
         return parent::install()
-            && $this->registerHook('displayHeader')
+            && $this->installDb()
+            && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('displayFooterAfter')
             && $this->registerHook('displayProductAdditionalInfo')
             && $this->registerHook('actionFrontControllerInitBefore')
             && $this->registerHook('displayOrderConfirmation')
-            && $this->createTables()
             && $this->setDefaultConfigurationValues();
     }
 
@@ -70,7 +90,20 @@ class AskDialog extends Module
 
     public function uninstall()
     {
-        return parent::uninstall() && $this->dropTables();
+        return parent::uninstall()
+            // Commented for development comfort - uncomment in production to clean all configuration
+            // && Configuration::deleteByName('ASKDIALOG_API_KEY')
+            // && Configuration::deleteByName('ASKDIALOG_API_KEY_PUBLIC')
+            // && Configuration::deleteByName('ASKDIALOG_ENABLE_PRODUCT_HOOK')
+            // && Configuration::deleteByName('ASKDIALOG_COLOR_PRIMARY')
+            // && Configuration::deleteByName('ASKDIALOG_COLOR_BACKGROUND')
+            // && Configuration::deleteByName('ASKDIALOG_COLOR_CTA_TEXT')
+            // && Configuration::deleteByName('ASKDIALOG_CTA_BORDER_TYPE')
+            // && Configuration::deleteByName('ASKDIALOG_CAPITALIZE_CTAS')
+            // && Configuration::deleteByName('ASKDIALOG_FONT_FAMILY')
+            // && Configuration::deleteByName('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME')
+            // && Configuration::deleteByName('ASKDIALOG_BATCH_SIZE')
+            && $this->uninstallDb();
     }
 
 
@@ -85,33 +118,89 @@ class AskDialog extends Module
     }
 
 
-    public function hookDisplayHeader($params)
+    public function hookActionFrontControllerSetMedia()
     {
-        if ($this->context->controller->php_self == 'product') {
-            $this->context->controller->addCSS($this->_path . 'views/css/cssForProductPage.css', 'all');
-        }
-        $this->context->controller->addCSS($this->_path . 'views/css/cssForAllPages.css', 'all');
-
-        //$this->context->controller->addJS($this->_path . 'views/js/index.js');
-        //Add JS
-        $this->context->controller->addJS($this->_path . 'views/js/setupModal.js');
-
-        //Si page produit
-        if ($this->context->controller->php_self == 'product') {
-            $this->context->controller->addJS($this->_path . 'views/js/instant.js');
-        }
-        else {
-            $this->context->controller->addJS($this->_path . 'views/js/ai-input.js');
+        // Register CSS files
+        if ($this->context->controller instanceof \ProductController) {
+            $this->context->controller->registerStylesheet(
+                'module-askdialog-product-style',
+                'modules/' . $this->name . '/views/css/cssForProductPage.css',
+                [
+                    'media' => 'all',
+                    'priority' => 200,
+                ]
+            );
         }
 
-        $this->context->controller->addJS($this->_path . 'views/js/askdialog.js');
-        $this->context->controller->addJS($this->_path . 'views/js/posthog.js');
+        $this->context->controller->registerStylesheet(
+            'module-askdialog-global-style',
+            'modules/' . $this->name . '/views/css/cssForAllPages.css',
+            [
+                'media' => 'all',
+                'priority' => 200,
+            ]
+        );
 
-        //Si on est sur la page de confirmation de commande, on ajoute le JS pour le formulaire de feedback
-        if ($this->context->controller->php_self == 'order-confirmation') {
-            $this->context->controller->addJS($this->_path . 'views/js/posthog_order_confirmation.js');
+        // Register JS files
+        $this->context->controller->registerJavascript(
+            'module-askdialog-setupmodal',
+            'modules/' . $this->name . '/views/js/setupModal.js',
+            [
+                'position' => 'bottom',
+                'priority' => 200,
+            ]
+        );
+
+        // Load specific JS for product pages
+        if ($this->context->controller instanceof \ProductController) {
+            $this->context->controller->registerJavascript(
+                'module-askdialog-instant',
+                'modules/' . $this->name . '/views/js/instant.js',
+                [
+                    'position' => 'bottom',
+                    'priority' => 200,
+                ]
+            );
+        } else {
+            $this->context->controller->registerJavascript(
+                'module-askdialog-ai-input',
+                'modules/' . $this->name . '/views/js/ai-input.js',
+                [
+                    'position' => 'bottom',
+                    'priority' => 200,
+                ]
+            );
         }
 
+        $this->context->controller->registerJavascript(
+            'module-askdialog-main',
+            'modules/' . $this->name . '/views/js/askdialog.js',
+            [
+                'position' => 'bottom',
+                'priority' => 200,
+            ]
+        );
+
+        $this->context->controller->registerJavascript(
+            'module-askdialog-posthog',
+            'modules/' . $this->name . '/views/js/posthog.js',
+            [
+                'position' => 'bottom',
+                'priority' => 200,
+            ]
+        );
+
+        // Load PostHog order confirmation script on order confirmation page
+        if ($this->context->controller instanceof \OrderConfirmationController) {
+            $this->context->controller->registerJavascript(
+                'module-askdialog-posthog-order',
+                'modules/' . $this->name . '/views/js/posthog_order_confirmation.js',
+                [
+                    'position' => 'bottom',
+                    'priority' => 200,
+                ]
+            );
+        }
     }
 
     public function hookDisplayOrderConfirmation($params)
@@ -131,9 +220,8 @@ class AskDialog extends Module
 
     public function hookDisplayProductAdditionalInfo($params)
     {
-
         // Ensure the hook is only executed on product pages
-        if ($this->context->controller->php_self !== 'product') {
+        if (!$this->context->controller instanceof \ProductController) {
             return;
         }
 
@@ -150,9 +238,9 @@ class AskDialog extends Module
         $product_title = $product['name'];
         $product_slug = $product['link_rewrite'];
         $selected_variant_id = $product['id_product_attribute'];
-        $assistant_name = $this->trans('AskDialog Assistant', [], 'Modules.AskDialog.Admin');
-        $assistant_description = $this->trans('Comment puis-je vous aider avec ce produit ?', [], 'Modules.AskDialog.Admin');
-        $ask_anything_placeholder = $this->trans('Comment puis-je vous aider avec ce produit ?', [], 'Modules.AskDialog.Admin');
+        $assistant_name = $this->trans('AskDialog Assistant', [], 'Modules.Askdialog.Admin');
+        $assistant_description = $this->trans('Comment puis-je vous aider avec ce produit ?', [], 'Modules.Askdialog.Admin');
+        $ask_anything_placeholder = $this->trans('Comment puis-je vous aider avec ce produit ?', [], 'Modules.Askdialog.Admin');
 
         $this->context->smarty->assign([
             'product_id' => $product_id,
@@ -172,7 +260,7 @@ class AskDialog extends Module
 
     public function hookDisplayFooterAfter($params)
     {
-        //Include view 
+        //Include view
         $this->context->smarty->assign('module_dir', $this->_path);
         $customer = $this->context->customer;
         $customerId = $customer->isLogged() ? $customer->id : 'anonymous';
@@ -210,7 +298,7 @@ class AskDialog extends Module
     public function getContent()
     {
         $output = '';
-        
+
         //Si on est a l'étape 1 on affiche le formulaire de configuration des API Keys
         if (Tools::getValue('test') == null && (Tools::getValue('step') == 1 || Tools::getValue('step') == null)) {
             if (Tools::isSubmit('submit' . $this->name)) {
@@ -218,19 +306,19 @@ class AskDialog extends Module
                 $apiKeyPublic = strval(Tools::getValue('ASKDIALOG_API_KEY_PUBLIC'));
                 $enableProductHook = (bool)Tools::getValue('ASKDIALOG_ENABLE_PRODUCT_HOOK');
                 if (!$apiKey || empty($apiKey)) {
-                    $output .= $this->displayError($this->trans('Invalid API Key', [], 'Modules.AskDialog.Admin'));
+                    $output .= $this->displayError($this->trans('Invalid API Key', [], 'Modules.Askdialog.Admin'));
                 } else {
                     Configuration::updateValue('ASKDIALOG_API_KEY', $apiKey);
                     Configuration::updateValue('ASKDIALOG_API_KEY_PUBLIC', $apiKeyPublic);
                     Configuration::updateValue('ASKDIALOG_ENABLE_PRODUCT_HOOK', $enableProductHook);
-    
-                    $output .= $this->displayConfirmation($this->trans('Settings updated', [], 'Modules.AskDialog.Admin'));
+
+                    $output .= $this->displayConfirmation($this->trans('Settings updated', [], 'Modules.Askdialog.Admin'));
                     $apiClient = new AskDialogClient($apiKey);
                     $result = $apiClient->sendDomainHost();
                     if ($result) {
-                        $output .= $this->displayConfirmation($this->trans('Connection successful', [], 'Modules.AskDialog.Admin'));
+                        $output .= $this->displayConfirmation($this->trans('Connection successful', [], 'Modules.Askdialog.Admin'));
                     } else {
-                        $output .= $this->displayError($this->trans('Connection failed', [], 'Modules.AskDialog.Admin'));
+                        $output .= $this->displayError($this->trans('Connection failed', [], 'Modules.Askdialog.Admin'));
                     }
                 }
             }
@@ -245,7 +333,7 @@ class AskDialog extends Module
                 $fontFamily = strval(Tools::getValue('ASKDIALOG_FONT_FAMILY'));
                 $highlightProductName = strval(Tools::getValue('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME'));
                 $batchSize = strval(Tools::getValue('ASKDIALOG_BATCH_SIZE'));
-    
+
                 Configuration::updateValue('ASKDIALOG_COLOR_PRIMARY', $primaryColor);
                 Configuration::updateValue('ASKDIALOG_COLOR_BACKGROUND', $backgroundColor);
                 Configuration::updateValue('ASKDIALOG_COLOR_CTA_TEXT', $ctaTextColor);
@@ -254,7 +342,7 @@ class AskDialog extends Module
                 Configuration::updateValue('ASKDIALOG_FONT_FAMILY', $fontFamily);
                 Configuration::updateValue('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME', $highlightProductName);
                 Configuration::updateValue('ASKDIALOG_BATCH_SIZE', $batchSize);
-                $output .= $this->displayConfirmation($this->trans('Settings updated', [], 'Modules.AskDialog.Admin'));
+                $output .= $this->displayConfirmation($this->trans('Settings updated', [], 'Modules.Askdialog.Admin'));
             }
             return $output . $this->renderFormSetting();
         }
@@ -262,31 +350,31 @@ class AskDialog extends Module
 
     protected function renderFormApiKeys()
     {
-        $fieldsForm = 
+        $fieldsForm =
         [
             'form' => [
                 'legend' => [
-                    'title' => $this->trans('Settings', [], 'Modules.AskDialog.Admin'),
+                    'title' => $this->trans('Settings', [], 'Modules.Askdialog.Admin'),
                     'icon' => 'icon-cogs',
                 ],
                 'input' => [
                     [
                         'type' => 'text',
-                        'label' => $this->trans('API Key public', [], 'Modules.AskDialog.Admin'),
+                        'label' => $this->trans('API Key public', [], 'Modules.Askdialog.Admin'),
                         'name' => 'ASKDIALOG_API_KEY_PUBLIC',
                         'size' => 20,
                         'required' => true,
                     ],
                     [
                     'type' => 'text',
-                    'label' => $this->trans('API Key private', [], 'Modules.AskDialog.Admin'),
+                    'label' => $this->trans('API Key private', [], 'Modules.Askdialog.Admin'),
                     'name' => 'ASKDIALOG_API_KEY',
                     'size' => 20,
                     'required' => true,
                     ],
                     [
                         'type' => 'switch',
-                        'label' => $this->trans('Enable on Product Page', [], 'Modules.AskDialog.Admin'),
+                        'label' => $this->trans('Enable on Product Page', [], 'Modules.Askdialog.Admin'),
                         'name' => 'ASKDIALOG_ENABLE_PRODUCT_HOOK',
                         'is_bool' => true,
                         'values' => [
@@ -301,7 +389,7 @@ class AskDialog extends Module
                                 'label' => $this->trans('Disabled', [], 'Admin.Global')
                             ]
                         ],
-                        'desc' => $this->trans('Enable or disable the AskDialog assistant on the product page.', [], 'Modules.AskDialog.Admin')
+                        'desc' => $this->trans('Enable or disable the AskDialog assistant on the product page.', [], 'Modules.Askdialog.Admin')
                     ],
                     //add a link to dialog onboarding
                     [
@@ -309,7 +397,7 @@ class AskDialog extends Module
                         'name' => 'askdialog_onboarding',
                         'html_content' => '<a href="https://app.askdialog.com/onboarding" target="_blank" class="btn btn-info">Go to AskDialog onboarding</a>'
                     ]
-                    
+
                 ],
                 'submit' => [
                     'title' => $this->trans('Save', [], 'Admin.Actions'),
@@ -319,7 +407,7 @@ class AskDialog extends Module
                     [
                         'href' => $this->context->link->getAdminLink('AdminModules', false)
                             . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name.'&step=2&token='.Tools::getAdminTokenLite('AdminModules'),
-                        'title' => $this->trans('Next', [], 'Modules.AskDialog.Admin'),
+                        'title' => $this->trans('Next', [], 'Modules.Askdialog.Admin'),
                         'class' => 'btn btn-default pull-right',
                         'icon' => 'process-icon-next'
                     ]
@@ -350,41 +438,41 @@ class AskDialog extends Module
         $fieldsForm = [
             'form' => [
             'legend' => [
-                'title' => $this->trans('Settings', [], 'Modules.AskDialog.Admin'),
+                'title' => $this->trans('Settings', [], 'Modules.Askdialog.Admin'),
                 'icon' => 'icon-cogs',
             ],
             'input' => [
                 [
                 'type' => 'color',
-                'label' => $this->trans('Primary Color', [], 'Modules.AskDialog.Admin'),
+                'label' => $this->trans('Primary Color', [], 'Modules.Askdialog.Admin'),
                 'name' => 'ASKDIALOG_COLOR_PRIMARY',
                 'size' => 20,
                 'required' => true,
                 ],
                 [
                 'type' => 'color',
-                'label' => $this->trans('Background Color', [], 'Modules.AskDialog.Admin'),
+                'label' => $this->trans('Background Color', [], 'Modules.Askdialog.Admin'),
                 'name' => 'ASKDIALOG_COLOR_BACKGROUND',
                 'size' => 20,
                 'required' => true,
                 ],
                 [
                 'type' => 'color',
-                'label' => $this->trans('CTA Text Color', [], 'Modules.AskDialog.Admin'),
+                'label' => $this->trans('CTA Text Color', [], 'Modules.Askdialog.Admin'),
                 'name' => 'ASKDIALOG_COLOR_CTA_TEXT',
                 'size' => 20,
                 'required' => true,
                 ],
                 [
                 'type' => 'text',
-                'label' => $this->trans('CTA Border Type', [], 'Modules.AskDialog.Admin'),
+                'label' => $this->trans('CTA Border Type', [], 'Modules.Askdialog.Admin'),
                 'name' => 'ASKDIALOG_CTA_BORDER_TYPE',
                 'size' => 20,
                 'required' => true,
                 ],
                 [
                 'type' => 'switch',
-                'label' => $this->trans('Capitalize CTAs', [], 'Modules.AskDialog.Admin'),
+                'label' => $this->trans('Capitalize CTAs', [], 'Modules.Askdialog.Admin'),
                 'name' => 'ASKDIALOG_CAPITALIZE_CTAS',
                 'is_bool' => true,
                 'values' => [
@@ -402,14 +490,14 @@ class AskDialog extends Module
                 ],
                 [
                 'type' => 'text',
-                'label' => $this->trans('Font Family', [], 'Modules.AskDialog.Admin'),
+                'label' => $this->trans('Font Family', [], 'Modules.Askdialog.Admin'),
                 'name' => 'ASKDIALOG_FONT_FAMILY',
                 'size' => 20,
                 'required' => true,
                 ],
                 [
                 'type' => 'switch',
-                'label' => $this->trans('Highlight Product Name', [], 'Modules.AskDialog.Admin'),
+                'label' => $this->trans('Highlight Product Name', [], 'Modules.Askdialog.Admin'),
                 'name' => 'ASKDIALOG_HIGHLIGHT_PRODUCT_NAME',
                 'is_bool' => true,
                 'values' => [
@@ -427,7 +515,7 @@ class AskDialog extends Module
                 ],
                 [
                     'type' => 'text',
-                    'label' => $this->trans('Batch Size', [], 'Modules.AskDialog.Admin'),
+                    'label' => $this->trans('Batch Size', [], 'Modules.Askdialog.Admin'),
                     'name' => 'ASKDIALOG_BATCH_SIZE',
                     'size' => 20,
                     'required' => true,
@@ -440,7 +528,7 @@ class AskDialog extends Module
                     [
                         'href' => $this->context->link->getAdminLink('AdminModules', false)
                             . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name.'&step=1&token='.Tools::getAdminTokenLite('AdminModules'),
-                        'title' => $this->trans('Previous', [], 'Modules.AskDialog.Admin'),
+                        'title' => $this->trans('Previous', [], 'Modules.Askdialog.Admin'),
                         'class' => 'btn btn-default pull-left',
                         'icon' => 'process-icon-back'
                     ]

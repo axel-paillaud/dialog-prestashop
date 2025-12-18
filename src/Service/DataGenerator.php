@@ -1,6 +1,26 @@
 <?php
+/*
+* 2007-2025 Dialog
+*
+* NOTICE OF LICENSE
+*
+* This source file is subject to the Academic Free License (AFL 3.0)
+* that is bundled with this package in the file LICENSE.txt.
+* It is also available through the world-wide-web at this URL:
+* http://opensource.org/licenses/afl-3.0.php
+*
+* DISCLAIMER
+*
+* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+* versions in the future. If you wish to customize PrestaShop for your
+* needs please refer to http://www.prestashop.com for more information.
+*
+*  @author Axel Paillaud <contact@axelweb.fr>
+*  @copyright  2007-2025 Dialog
+*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+*/
 
-namespace LouisAuthie\Askdialog\Service;
+namespace Dialog\AskDialog\Service;
 
 use Db;
 use Product;
@@ -21,7 +41,7 @@ class DataGenerator{
 
     public function generateCMSData()
     {
-        // Récupérer toutes les pages CMS
+        // Retrieve all CMS pages
         $sql = 'SELECT * FROM ' . _DB_PREFIX_ . 'cms_lang WHERE id_lang = ' . (int)Configuration::get('PS_LANG_DEFAULT');
         $cmsPages = Db::getInstance()->executeS($sql);
 
@@ -33,12 +53,11 @@ class DataGenerator{
             ];
         }
 
-        // Créer le dossier temp s'il n'existe pas
+        // Create temp folder if it doesn't exist
         if (!file_exists(_PS_MODULE_DIR_ . 'askdialog/temp')) {
             mkdir(_PS_MODULE_DIR_ . 'askdialog/temp', 0777, true);
         }
 
-        // Générer le fichier JSON
         $tempFile = _PS_MODULE_DIR_ . 'askdialog/temp/cms.json';
         file_put_contents($tempFile, json_encode($cmsData));
     }
@@ -60,10 +79,10 @@ class DataGenerator{
 
 
         $taxCalculator = null;
-        //Handle the product price with tax in the country
+        // Handle product price with tax for the country
         if($countryCode != null){
             $addressObj = new Address();
-            //Get the Country ID from the country code in iso format
+            // Get Country ID from ISO country code
             $countryObj = new Country();
             $idCountry = $countryObj::getByIso($countryCode);
             $addressObj->id_state = 0;
@@ -88,7 +107,6 @@ class DataGenerator{
             $productItem['totalVariants'] = count($productAttributes);
         }
 
-        //Retrieve variants 
         $combinations = $productObj->getAttributeCombinations($defaultLang, false);
         $productItem['totalVariants'] = count($combinations);
 
@@ -97,7 +115,7 @@ class DataGenerator{
 
             $productAttributeObj = new Combination((int)$productAttribute);
             $variant = [];
-            
+
 
             $images = Product::_getAttributeImageAssociations($productAttribute["id_product_attribute"]);
             if(count($images)>0){
@@ -117,11 +135,11 @@ class DataGenerator{
             $variant["title"] = $variant["displayName"];
             $stockAvailableCombinationObj = new StockAvailable(StockAvailable::getStockAvailableIdByProductId($productObj->id, $productAttribute["id_product_attribute"]));
             $variant["inventoryQuantity"] = (int)$stockAvailableCombinationObj->quantity;
-            
+
             if($taxCalculator != null){
-                $variant["price"] = $taxCalculator->addTaxes(Product::getPriceStatic($productObj->id, true, $productAttribute['id_product_attribute'], 2, null, false, true)); // With reductions (computed)
+                $variant["price"] = $taxCalculator->addTaxes(Product::getPriceStatic($productObj->id, true, $productAttribute['id_product_attribute'], 2, null, false, true)); // With reductions
             }else{
-                $variant["price"] = Product::getPriceStatic($productObj->id, false, $productAttribute['id_product_attribute'], 2, null, false, true); // With reductions (computed)
+                $variant["price"] = Product::getPriceStatic($productObj->id, false, $productAttribute['id_product_attribute'], 2, null, false, true); // With reductions
             }
             $attributeCombinations = $productObj->getAttributeCombinationsById($productAttribute["id_product_attribute"], $defaultLang);
             $options = [];
@@ -129,8 +147,8 @@ class DataGenerator{
                 foreach ($attributeCombinations as $combination) {
                     if (isset($combination['group_name']) && isset($combination['attribute_name'])) {
                         $options[] = [
-                            'name' => $combination['group_name'],  // ex: Couleur, Taille
-                            'value' => $combination['attribute_name'], // ex: Bleu, M
+                            'name' => $combination['group_name'],
+                            'value' => $combination['attribute_name'],
                         ];
                     }
                 }
@@ -148,26 +166,25 @@ class DataGenerator{
         $featuredImage = null;
 
         foreach ($productImages as $image) {
-            //Get image url
+            // Get image URL
             $linkImage = $linkObj->getImageLink($productObj->link_rewrite[$defaultLang], $image['id_image'], 'large_default');
 
             if($image['cover'] != null && $image['cover']=='1'){
                 $productItem['featuredImage'] = ['url'=>$linkImage];
             }
-            $images[] = ['url'=>$linkImage];           
+            $images[] = ['url'=>$linkImage];
         }
         $productItem["images"] = $images;
         $stockAvailableObj = new StockAvailable(StockAvailable::getStockAvailableIdByProductId($productObj->id));
         $productItem["totalInventory"] = (int)$stockAvailableObj->quantity;
         $productItem["status"] = $productObj->active?"ACTIVE":"NOT ACTIVE";
 
-        //Retrieve categories
         $categories = $productObj->getCategories();
         $categoryItems = [];
 
         foreach ($categories as $categoryId) {
             $category = new Category($categoryId, $defaultLang);
-            
+
             if ($category->description !== null && $category->name !== null) {
                 $categoryItems[] = [
                     "description" => $category->description,
@@ -183,7 +200,6 @@ class DataGenerator{
             $productItem["tags"] = explode(", ", $productObj->getTags($defaultLang));
         }
 
-        //Get all the product features
         $productFeatures = $productObj->getFrontFeatures($defaultLang);
         $productItem["metafields"] = [];
         foreach ($productFeatures as $feature) {
@@ -203,9 +219,9 @@ class DataGenerator{
 
     public function getCatalogDataForBatch($batchSize, $idShop)
     {
-        //Retrieve from the askdialog_product table the ids to process
+        // Retrieve product IDs to process from askdialog_product table
         $products = Db::getInstance()->executeS('SELECT * FROM ' . _DB_PREFIX_ . 'askdialog_product WHERE id_shop = ' . $idShop . ' LIMIT ' . $batchSize);
-        $defaultLang = (int) Configuration::get('PS_LANG_DEFAULT'); 
+        $defaultLang = (int) Configuration::get('PS_LANG_DEFAULT');
         $linkObj = new Link();
         foreach($products as $product){
             if (!empty($productData = $this->getProductData($product['id_product'], $defaultLang, $linkObj))) {
@@ -222,7 +238,6 @@ class DataGenerator{
     }
 
     public function getCatalogData(){
-        //Retrieve all prestashop products
         $products = Db::getInstance()->executeS('SELECT * FROM ' . _DB_PREFIX_ . 'product');
         $defaultLang = (int) Configuration::get('PS_LANG_DEFAULT');
 
