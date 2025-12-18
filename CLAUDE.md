@@ -57,6 +57,7 @@ AskDialog is a PrestaShop module that integrates conversational AI into e-commer
 ### Configuration (Configuration::get)
 - `ASKDIALOG_API_KEY`: Private API key
 - `ASKDIALOG_API_KEY_PUBLIC`: Public API key
+- `ASKDIALOG_API_URL`: Api URL
 - `ASKDIALOG_ENABLE_PRODUCT_HOOK`: Enable on product pages
 - `ASKDIALOG_COLOR_PRIMARY`: Primary color
 - `ASKDIALOG_COLOR_BACKGROUND`: Background color
@@ -144,6 +145,7 @@ exit;
 - Use ESLint for JavaScript
 - All classes must have proper PHPDoc
 - Use type hints where possible (PHP 7.1+)
+- If using Core PrestaShop Class (e.g. Context, Product, etc), use FQCN (\Context, \Product etc) instead of manually import them with "use" keyword.
 
 ## Git Workflow
 
