@@ -22,6 +22,7 @@
 
 use Dialog\AskDialog\Service\DataGenerator;
 use Dialog\AskDialog\Service\AskDialogClient;
+use Dialog\AskDialog\Helper\PathHelper;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -53,6 +54,8 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
         
         $this->ajax = true;
     }
+
+
 
     /**
      * Sends a file to S3 using signed URL with multipart/form-data
@@ -149,7 +152,7 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
             }
 
             // All products processed - merge partial files
-            $files = glob(_PS_MODULE_DIR_ . 'askdialog/temp/catalog_partial_*.json');
+            $files = glob(PathHelper::getTmpDir() . 'catalog_partial_*.json');
             
             if (empty($files)) {
                 throw new Exception('No catalog files found to process.');
@@ -170,7 +173,7 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
 
             // Generate final catalog file
             $filename = 'catalog_' . date('Ymd_His') . '.json';
-            $tempFile = _PS_MODULE_DIR_ . 'askdialog/temp/' . $filename;
+            $tempFile = PathHelper::getTmpDir() . $filename;
             file_put_contents($tempFile, json_encode($dataCatalog));
 
             // Reset queue for next export
@@ -224,15 +227,15 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
             // Send CMS pages to S3
             $urlPages = $bodyPages['url'];
             $fieldsPages = $bodyPages['fields'];
-            $tempsCmsFile = _PS_MODULE_DIR_ . 'askdialog/temp/cms.json';
-            $responsePages = $this->sendFileToS3($urlPages, $fieldsPages, $tempsCmsFile, 'cms.json');
+            $cmsFile = PathHelper::getTmpDir() . 'cms.json';
+            $responsePages = $this->sendFileToS3($urlPages, $fieldsPages, $cmsFile, 'cms.json');
 
             // Check both uploads succeeded
             if ($responseCatalog->getStatusCode() === 204 && $responsePages->getStatusCode() === 204) {
                 // Move files to sent folder
-                rename($tempFile, _PS_MODULE_DIR_ . 'askdialog/sent/' . $filename);
+                rename($tempFile, PathHelper::getSentDir() . $filename);
                 $filenameCMS = 'cms_' . date('Ymd_His') . '.json';
-                rename($tempsCmsFile, _PS_MODULE_DIR_ . 'askdialog/sent/' . $filenameCMS);
+                rename($cmsFile, PathHelper::getSentDir() . $filenameCMS);
 
                 $this->sendJsonResponse([
                     'status' => 'success',
@@ -259,7 +262,7 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
     private function generatePartialDataFile($dataCatalog, $dataGenerator, $idShop)
     {
         $filename = 'catalog_partial_' . date('Ymd_His') . '_' . uniqid() . '.json';
-        $tempFile = _PS_MODULE_DIR_ . 'askdialog/temp/' . $filename;
+        $tempFile = PathHelper::getTmpDir() . $filename;
         file_put_contents($tempFile, json_encode($dataCatalog));
 
         // Remove processed products from queue
