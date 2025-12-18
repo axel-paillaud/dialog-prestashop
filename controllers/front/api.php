@@ -21,6 +21,7 @@
 */
 
 use Dialog\AskDialog\Service\DataGenerator;
+use Dialog\AskDialog\Trait\JsonResponseTrait;
 
 /**
  * Class AskDialogApiModuleFrontController
@@ -30,6 +31,8 @@ use Dialog\AskDialog\Service\DataGenerator;
  */
 class AskDialogApiModuleFrontController extends ModuleFrontController
 {
+    use JsonResponseTrait;
+
     /**
      * Initialize controller and verify public API key authentication
      */
@@ -146,19 +149,5 @@ class AskDialogApiModuleFrontController extends ModuleFrontController
         $productData = $dataGenerator->getProductData($productId, $idLang, $linkObj, $countryCode);
         
         $this->sendJsonResponse($productData);
-    }
-
-    /**
-     * Sends a JSON response with proper headers and exits
-     *
-     * @param array $data Response data
-     * @param int $statusCode HTTP status code (default: 200)
-     */
-    private function sendJsonResponse($data, $statusCode = 200)
-    {
-        http_response_code($statusCode);
-        header('Content-Type: application/json');
-        echo json_encode($data);
-        exit;
     }
 }

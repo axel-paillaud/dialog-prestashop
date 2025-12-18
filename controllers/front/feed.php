@@ -23,6 +23,7 @@
 use Dialog\AskDialog\Service\DataGenerator;
 use Dialog\AskDialog\Service\AskDialogClient;
 use Dialog\AskDialog\Helper\PathHelper;
+use Dialog\AskDialog\Trait\JsonResponseTrait;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
@@ -36,6 +37,8 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
  */
 class AskDialogFeedModuleFrontController extends ModuleFrontController
 {
+    use JsonResponseTrait;
+
     /**
      * Initialize controller and verify API key authentication
      */
@@ -240,19 +243,5 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
         } catch (TransportExceptionInterface $e) {
             throw new Exception('Network error during S3 upload: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Sends a JSON response with proper headers and exits
-     *
-     * @param array $data Response data
-     * @param int $statusCode HTTP status code (default: 200)
-     */
-    private function sendJsonResponse($data, $statusCode = 200)
-    {
-        http_response_code($statusCode);
-        header('Content-Type: application/json');
-        echo json_encode($data);
-        exit;
     }
 }
