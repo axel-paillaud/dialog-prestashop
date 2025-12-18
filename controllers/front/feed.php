@@ -131,7 +131,7 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
     private function handleCatalogExport($dataGenerator, $batchSize)
     {
         try {
-            $idShop = Configuration::get('PS_SHOP_DEFAULT');
+            $idShop = (int)$this->context->shop->id;
             $numRemaining = $dataGenerator->getNumCatalogRemaining($idShop);
             $dataCatalog = $dataGenerator->getCatalogDataForBatch($batchSize, $idShop);
 
@@ -276,18 +276,23 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
     }
 
     /**
-     * Resets the export queue by repopulating with all products
+     * Resets the export queue by repopulating with all products from current shop
      *
-     * @param int $idShop
+     * @param int $idShop Current shop ID
      */
     private function resetExportQueue($idShop)
     {
-        // Truncate queue
-        $sql = 'TRUNCATE TABLE ' . _DB_PREFIX_ . 'askdialog_product';
+        // Clear existing queue for this shop
+        $sql = 'DELETE FROM ' . _DB_PREFIX_ . 'askdialog_product WHERE id_shop = ' . (int)$idShop;
         Db::getInstance()->execute($sql);
 
-        // Repopulate with all products
-        $products = Db::getInstance()->executeS('SELECT id_product FROM ' . _DB_PREFIX_ . 'product');
+        // Repopulate with all products from current shop
+        $sql = 'SELECT p.id_product 
+                FROM ' . _DB_PREFIX_ . 'product p
+                INNER JOIN ' . _DB_PREFIX_ . 'product_shop ps ON p.id_product = ps.id_product
+                WHERE ps.id_shop = ' . (int)$idShop;
+        $products = Db::getInstance()->executeS($sql);
+        
         foreach ($products as $product) {
             $sql = 'INSERT INTO ' . _DB_PREFIX_ . 'askdialog_product (id_product, id_shop) 
                     VALUES (' . (int)$product['id_product'] . ', ' . (int)$idShop . ')';
