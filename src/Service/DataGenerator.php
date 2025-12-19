@@ -237,19 +237,20 @@ class DataGenerator{
     }
 
     public function getProductData($product_id, $defaultLang, $linkObj, $countryCode = 'fr') {
-        $productObj = new \Product((int)$product_id);
+        // Use preloaded data instead of loading Product object
+        if (!isset($this->productsData[$product_id])) {
+            return [];
+        }
 
-        if (!\Validate::isLoadedObject($productObj)) {
-			return [];
-		}
-
+        $productData = $this->productsData[$product_id];
+        
         $productItem = [];
-        $publishedAt = (new \DateTime($productObj->date_add))->format('Y-m-d\TH:i:s\Z');
+        $publishedAt = (new \DateTime($productData['date_add']))->format('Y-m-d\TH:i:s\Z');
         $productItem["publishedAt"] = $publishedAt;
-        $productItem["modifiedDescription"] = $productObj->description_short[$defaultLang];
-        $productItem["description"] = $productObj->description[$defaultLang];
-        $productItem["title"] = $productObj->name[$defaultLang];
-        $productItem["handle"] = $productObj->link_rewrite[$defaultLang];
+        $productItem["modifiedDescription"] = $productData['description_short'];
+        $productItem["description"] = $productData['description'];
+        $productItem["title"] = $productData['name'];
+        $productItem["handle"] = $productData['link_rewrite'];
 
 
         $taxCalculator = null;
