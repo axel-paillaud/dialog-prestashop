@@ -188,10 +188,9 @@ class DataGenerator{
             throw new \Exception('No products found for shop ID ' . $idShop);
         }
 
-        // Bulk load ALL data upfront (11 queries total instead of N*24)
         $this->bulkLoadData($productIds, $idLang, $idShop);
 
-        // Generate catalog data (no more queries, uses preloaded data)
+        // Generate catalog data, uses preloaded data
         $catalogData = [];
         $linkObj = new \Link();
 
