@@ -77,53 +77,25 @@ AskDialog is a PrestaShop module that integrates conversational AI into e-commer
 
 ## TODO: Current Sprint
 
-### 1. Migration Guzzle → Symfony HttpClient
-**Objective:** Replace GuzzleHTTP with Symfony HttpClient for better PrestaShop 8.x integration
+### 1. Performance & Architecture
+- [ ] **Complete DataGenerator refactoring**: Fix N+1 query problems and improve overall performance
+  - Current issue: Multiple database queries for each product (N+1 problem)
+  - Goal: Reduce database queries by optimizing data fetching logic
 
-**Files to modify:**
-- `src/Service/AskDialogClient.php`: Refactor to use Symfony HttpClient
-- `controllers/front/feed.php`: Update if using HTTP client directly
-- `controllers/front/api.php`: Update if using HTTP client directly
+### 2. Data Export Improvements
+- [ ] **Generate unique ID names for CMS JSON files**
+  - Status: Catalog export already generates unique IDs ✓
+  - TODO: Implement same logic for CMS pages export
+  
+- [ ] **Add import validation**
+  - Current issue: Missing validation causes bugs when importing malformed data
+  - Goal: Implement validation checks before processing import data
 
-**Implementation steps:**
-1. Refactor AskDialogClient class:
-   - Replace Guzzle Client with HttpClient
-   - Update request methods (POST, GET, etc.)
-   - Improve error handling with proper HTTP exceptions
-   - Add PHPDoc and type hints
-2. Test all API endpoints (validate domain, prepare server transfer)
-3. Run `composer update` and `composer dump-autoload`
-
-**Benefits:**
-- Native Symfony integration (PrestaShop 8.x uses Symfony)
-- Better PSR-18 compliance
-- Improved error handling
-- Reduced dependencies
-
-### 2. Remove die() Usage on Ajax Responses
-**Objective:** Replace all `die()` calls with proper HTTP responses
-
-**Files to check:**
-- All controllers in `controllers/front/`
-- Ajax handlers in `askdialog.php`
-- Any custom API endpoints
-
-**Implementation:**
-- Replace `die()` with proper JSON responses
-- Use HTTP status codes correctly (200, 400, 401, 500)
-- Add proper Content-Type headers
-- Implement consistent error response format
-
-**Example transformation:**
-```php
-// Before
-die(json_encode(['error' => 'Not found']));
-
-// After
-header('Content-Type: application/json', true, 404);
-echo json_encode(['error' => 'Not found', 'code' => 404]);
-exit;
-```
+### 3. File System Management
+- [ ] **Update CMS JSON file storage path**
+  - Replace hardcoded paths with `PathHelper` utility
+  - Store files in `var/modules/askdialog/` instead of current location
+  - Ensure proper directory creation and permissions 
 
 ## Development Workflow
 
@@ -145,13 +117,16 @@ exit;
 - Use ESLint for JavaScript
 - All classes must have proper PHPDoc
 - Use type hints where possible (PHP 7.1+)
-- If using Core PrestaShop Class (e.g. Context, Product, etc), use FQCN (\Context, \Product etc) instead of manually import them with "use" keyword.
+- **For all Core PrestaShop classes** (e.g., `Product`, `Context`, `Validation`, `Configuration`, etc.):
+  - Always use FQCN (Fully Qualified Class Name) with leading backslash: `\Product`, `\Context`, `\Validation`
+  - Never import them with `use` keyword at the top of the file
+  - This ensures compatibility across PrestaShop versions and avoids namespace conflicts
 
 ## Git Workflow
 
 - Branch naming: `feature/{feature-name}` or `fix/{issue-name}`
 - Commit messages: Conventional Commits format (in English)
-  - `feat: add new feature`
+  - `feature: add new feature`
   - `fix: resolve bug`
   - `refactor: restructure code`
   - `docs: update documentation`
