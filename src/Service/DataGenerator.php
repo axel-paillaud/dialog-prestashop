@@ -23,9 +23,49 @@
 namespace Dialog\AskDialog\Service;
 
 use Dialog\AskDialog\Helper\PathHelper;
+use Dialog\AskDialog\Repository\ProductRepository;
+use Dialog\AskDialog\Repository\CombinationRepository;
+use Dialog\AskDialog\Repository\ImageRepository;
+use Dialog\AskDialog\Repository\StockRepository;
+use Dialog\AskDialog\Repository\CategoryRepository;
+use Dialog\AskDialog\Repository\TagRepository;
+use Dialog\AskDialog\Repository\FeatureRepository;
 
 class DataGenerator{
     private $products = [];
+    
+    // Repositories
+    private $productRepository;
+    private $combinationRepository;
+    private $imageRepository;
+    private $stockRepository;
+    private $categoryRepository;
+    private $tagRepository;
+    private $featureRepository;
+    
+    // Preloaded data (indexed for O(1) lookup)
+    private $productsData = [];
+    private $combinationsData = [];
+    private $combinationAttributesData = [];
+    private $productImagesData = [];
+    private $combinationImagesData = [];
+    private $productStockData = [];
+    private $combinationStockData = [];
+    private $productCategoriesData = [];
+    private $categoriesData = [];
+    private $productTagsData = [];
+    private $productFeaturesData = [];
+    
+    public function __construct()
+    {
+        $this->productRepository = new ProductRepository();
+        $this->combinationRepository = new CombinationRepository();
+        $this->imageRepository = new ImageRepository();
+        $this->stockRepository = new StockRepository();
+        $this->categoryRepository = new CategoryRepository();
+        $this->tagRepository = new TagRepository();
+        $this->featureRepository = new FeatureRepository();
+    }
 
     /**
      * Generates CMS pages data and saves to JSON file
@@ -63,6 +103,71 @@ class DataGenerator{
     }
 
     /**
+     * Bulk load all data for multiple products
+     * This method loads ALL data in ~13 queries instead of N*24 queries
+     *
+     * @param array $productIds Array of product IDs
+     * @param int $idLang Language ID
+     * @param int $idShop Shop ID
+     * @return void
+     */
+    private function bulkLoadData(array $productIds, $idLang, $idShop)
+    {
+        if (empty($productIds)) {
+            return;
+        }
+
+        // 1. Load products with multilingual data (1 query)
+        $this->productsData = $this->productRepository->findByIdsWithLang($productIds, $idLang, $idShop);
+
+        // 2. Load combinations (1 query)
+        $this->combinationsData = $this->combinationRepository->findByProductIds($productIds);
+        
+        // Get all combination IDs for next queries
+        $combinationIds = $this->combinationRepository->getCombinationIdsByProductIds($productIds);
+        
+        if (!empty($combinationIds)) {
+            // 3. Load combination attributes (1 query)
+            $this->combinationAttributesData = $this->combinationRepository->findAttributesByCombinationIds($combinationIds, $idLang);
+            
+            // 4. Load combination images (1 query)
+            $this->combinationImagesData = $this->imageRepository->findByCombinationIds($combinationIds);
+            
+            // 5. Load combination stock (1 query)
+            $this->combinationStockData = $this->stockRepository->findByCombinationIds($combinationIds, $idShop);
+        }
+
+        // 6. Load product images (1 query)
+        $this->productImagesData = $this->imageRepository->findByProductIds($productIds, $idShop);
+
+        // 7. Load product stock (1 query)
+        $this->productStockData = $this->stockRepository->findByProductIds($productIds, $idShop);
+
+        // 8. Load product-category relations (1 query)
+        $this->productCategoriesData = $this->categoryRepository->findCategoryIdsByProductIds($productIds);
+        
+        // Get all unique category IDs and load category details
+        $categoryIds = [];
+        foreach ($this->productCategoriesData as $categories) {
+            foreach ($categories as $cat) {
+                $categoryIds[] = $cat['id_category'];
+            }
+        }
+        $categoryIds = array_unique($categoryIds);
+        
+        if (!empty($categoryIds)) {
+            // 9. Load categories (1 query)
+            $this->categoriesData = $this->categoryRepository->findByIds($categoryIds, $idLang, $idShop);
+        }
+
+        // 10. Load tags (1 query)
+        $this->productTagsData = $this->tagRepository->findByProductIds($productIds, $idLang);
+
+        // 11. Load features (1 query)
+        $this->productFeaturesData = $this->featureRepository->findByProductIds($productIds, $idLang);
+    }
+
+    /**
      * Generates catalog data and saves to JSON file
      *
      * @param int $idShop Shop ID
@@ -80,7 +185,10 @@ class DataGenerator{
             throw new \Exception('No products found for shop ID ' . $idShop);
         }
 
-        // Generate catalog data
+        // Bulk load ALL data upfront (11 queries total instead of N*24)
+        $this->bulkLoadData($productIds, $idLang, $idShop);
+
+        // Generate catalog data (no more queries, uses preloaded data)
         $catalogData = [];
         $linkObj = new \Link();
 
