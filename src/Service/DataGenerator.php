@@ -332,14 +332,12 @@ class DataGenerator{
 
         $productItem['variants'] = $variants;
 
+        // Use preloaded product images
         $images = [];
-        $productImages = $productObj->getImages($defaultLang);
-
-        $featuredImage = null;
+        $productImages = isset($this->productImagesData[$product_id]) ? $this->productImagesData[$product_id] : [];
 
         foreach ($productImages as $image) {
-            // Get image URL
-            $linkImage = $linkObj->getImageLink($productObj->link_rewrite[$defaultLang], $image['id_image'], 'large_default');
+            $linkImage = $linkObj->getImageLink($productData['link_rewrite'], $image['id_image'], 'large_default');
 
             if($image['cover'] != null && $image['cover']=='1'){
                 $productItem['featuredImage'] = ['url'=>$linkImage];
@@ -347,45 +345,53 @@ class DataGenerator{
             $images[] = ['url'=>$linkImage];
         }
         $productItem["images"] = $images;
-        $stockAvailableObj = new \StockAvailable(\StockAvailable::getStockAvailableIdByProductId($productObj->id));
-        $productItem["totalInventory"] = (int)$stockAvailableObj->quantity;
-        $productItem["status"] = $productObj->active?"ACTIVE":"NOT ACTIVE";
+        
+        // Use preloaded product stock
+        $stock = isset($this->productStockData[$product_id]) ? $this->productStockData[$product_id] : null;
+        $productItem["totalInventory"] = $stock ? (int)$stock['quantity'] : 0;
+        $productItem["status"] = $productData['active'] ? "ACTIVE" : "NOT ACTIVE";
 
-        $categories = $productObj->getCategories();
+        // Use preloaded categories
         $categoryItems = [];
-
-        foreach ($categories as $categoryId) {
-            $category = new \Category($categoryId, $defaultLang);
-
-            if ($category->description !== null && $category->name !== null) {
-                $categoryItems[] = [
-                    "description" => $category->description,
-                    "title" => $category->name
-                ];
+        if (isset($this->productCategoriesData[$product_id])) {
+            foreach ($this->productCategoriesData[$product_id] as $catRelation) {
+                $categoryId = $catRelation['id_category'];
+                if (isset($this->categoriesData[$categoryId])) {
+                    $category = $this->categoriesData[$categoryId];
+                    $categoryItems[] = [
+                        "description" => $category['description'],
+                        "title" => $category['name']
+                    ];
+                }
+            }
+        }
+        $productItem["categories"] = $categoryItems;
+        
+        // Use preloaded tags
+        $productItem["tags"] = [];
+        if (isset($this->productTagsData[$product_id])) {
+            foreach ($this->productTagsData[$product_id] as $tag) {
+                $productItem["tags"][] = $tag['name'];
             }
         }
 
-        $productItem["categories"] = $categoryItems;
-        if($productObj->getTags($defaultLang) == ""){
-            $productItem["tags"] = [];
-        }else{
-            $productItem["tags"] = explode(", ", $productObj->getTags($defaultLang));
-        }
-
-        $productFeatures = $productObj->getFrontFeatures($defaultLang);
+        // Use preloaded features
         $productItem["metafields"] = [];
-        foreach ($productFeatures as $feature) {
-            $productItem["metafields"][] = [
-            "name" => $feature['name'],
-            "value" => $feature['value'] !== null ? $feature['value'] : ""
-            ];
+        if (isset($this->productFeaturesData[$product_id])) {
+            foreach ($this->productFeaturesData[$product_id] as $feature) {
+                $productItem["metafields"][] = [
+                    "name" => $feature['feature_name'],
+                    "value" => $feature['feature_value'] !== null ? $feature['feature_value'] : ""
+                ];
+            }
         }
+        
         if($productItem['totalVariants']>0){
             $productItem["hasOnlyDefaultVariant"] = 0;
         }else{
             $productItem["hasOnlyDefaultVariant"] = 1;
         }
-        $productItem["id"] = (int)$productObj->id;
+        $productItem["id"] = (int)$product_id;
         return $productItem;
     }
 
