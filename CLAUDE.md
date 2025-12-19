@@ -57,6 +57,7 @@ AskDialog is a PrestaShop module that integrates conversational AI into e-commer
 ### Configuration (Configuration::get)
 - `ASKDIALOG_API_KEY`: Private API key
 - `ASKDIALOG_API_KEY_PUBLIC`: Public API key
+- `ASKDIALOG_API_URL`: Api URL
 - `ASKDIALOG_ENABLE_PRODUCT_HOOK`: Enable on product pages
 - `ASKDIALOG_COLOR_PRIMARY`: Primary color
 - `ASKDIALOG_COLOR_BACKGROUND`: Background color
@@ -74,50 +75,55 @@ AskDialog is a PrestaShop module that integrates conversational AI into e-commer
 - `actionFrontControllerInitBefore`: Handle CORS (currently commented)
 - `displayOrderConfirmation`: PostHog analytics on order confirmation
 
-## TODO: Cleanup Legacy Elements from 1.6
+## TODO: Current Sprint
 
-### 1. Rename Namespace: LouisAuthie → Dialog\AskDialog
+### 1. Migration Guzzle → Symfony HttpClient
+**Objective:** Replace GuzzleHTTP with Symfony HttpClient for better PrestaShop 8.x integration
+
 **Files to modify:**
-- `composer.json`: Update autoload PSR-4
-- `askdialog.php`: Update use statements
-- `src/Service/AskDialogClient.php`: Update namespace declaration
-- `src/Service/DataGenerator.php`: Update namespace declaration
-- `controllers/front/feed.php`: Update use statements
-- `controllers/front/api.php`: Update use statements
+- `src/Service/AskDialogClient.php`: Refactor to use Symfony HttpClient
+- `controllers/front/feed.php`: Update if using HTTP client directly
+- `controllers/front/api.php`: Update if using HTTP client directly
 
-After changes: Run `composer dump-autoload`
+**Implementation steps:**
+1. Refactor AskDialogClient class:
+   - Replace Guzzle Client with HttpClient
+   - Update request methods (POST, GET, etc.)
+   - Improve error handling with proper HTTP exceptions
+   - Add PHPDoc and type hints
+2. Test all API endpoints (validate domain, prepare server transfer)
+3. Run `composer update` and `composer dump-autoload`
 
-### 2. Configure Composer Autoload
-- Ensure PSR-4 autoloading is properly configured
-- Verify vendor directory structure
-- Add `.gitignore` rules for vendor if missing
+**Benefits:**
+- Native Symfony integration (PrestaShop 8.x uses Symfony)
+- Better PSR-18 compliance
+- Improved error handling
+- Reduced dependencies
 
-### 3. Remove Deprecated Hooks
-**Audit hooks in `install()` method:**
-- Check PrestaShop 8.x compatibility
-- Remove hooks specific to PrestaShop 1.6
-- Verify `actionFrontControllerInitBefore` usage (CORS handling is commented)
-
-### 4. Rename Translation Domain
-**Current:** `Modules.AskDialog.Admin`
-**Target:** To be defined (standardize across module)
+### 2. Remove die() Usage on Ajax Responses
+**Objective:** Replace all `die()` calls with proper HTTP responses
 
 **Files to check:**
-- All `$this->trans()` calls in `askdialog.php`
-- Template files if they use translations
+- All controllers in `controllers/front/`
+- Ajax handlers in `askdialog.php`
+- Any custom API endpoints
 
-### 5. Remove Vendor from Git Versioning
-- Add `/vendor/` to `.gitignore`
-- Remove vendor directory from git tracking: `git rm -r --cached vendor`
-- Commit the `.gitignore` update
-- Document composer install requirement in README
+**Implementation:**
+- Replace `die()` with proper JSON responses
+- Use HTTP status codes correctly (200, 400, 401, 500)
+- Add proper Content-Type headers
+- Implement consistent error response format
 
-### 7. Create/Update README.md
-- Installation instructions
-- Configuration guide
-- Development setup (composer install, npm install, build)
-- API documentation
-- Hook descriptions
+**Example transformation:**
+```php
+// Before
+die(json_encode(['error' => 'Not found']));
+
+// After
+header('Content-Type: application/json', true, 404);
+echo json_encode(['error' => 'Not found', 'code' => 404]);
+exit;
+```
 
 ## Development Workflow
 
@@ -139,6 +145,7 @@ After changes: Run `composer dump-autoload`
 - Use ESLint for JavaScript
 - All classes must have proper PHPDoc
 - Use type hints where possible (PHP 7.1+)
+- If using Core PrestaShop Class (e.g. Context, Product, etc), use FQCN (\Context, \Product etc) instead of manually import them with "use" keyword.
 
 ## Git Workflow
 

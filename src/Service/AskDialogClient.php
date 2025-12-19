@@ -22,95 +22,117 @@
 
 namespace Dialog\AskDialog\Service;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
-use Context;
-use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-class AskDialogClient{
-    private $apiKey;
-    private $urlApi;
+/**
+ * Class AskDialogClient
+ *
+ * Handles HTTP communication with Dialog AI platform API
+ *
+ * @package Dialog\AskDialog\Service
+ */
+class AskDialogClient
+{
+    /**
+     * @var HttpClientInterface Symfony HTTP client instance
+     */
+    private $httpClient;
 
-    public function __construct($apiKey) {
-        $this->apiKey = $apiKey;
-        $this->urlApi = $this->getApiUrlFromConfig();
-    }
-
-    private function getApiUrlFromConfig() {
-        $yamlFile = _PS_MODULE_DIR_ . 'askdialog/config/config.yml';
-        if (!file_exists($yamlFile)) {
-            throw new \Exception('Config file config.yml not found');
+    /**
+     * AskDialogClient constructor.
+     *
+     * @throws \Exception If ASKDIALOG_API_KEY or ASKDIALOG_API_URL is not configured
+     */
+    public function __construct()
+    {
+        $apiKey = \Configuration::get('ASKDIALOG_API_KEY');
+        if (empty($apiKey)) {
+            throw new \Exception('ASKDIALOG_API_KEY configuration is missing. Please configure the module.');
         }
 
-        $config = Yaml::parseFile($yamlFile);
-        return $config['askdialog']['settings']['api_url'];
+        $apiUrl = \Configuration::get('ASKDIALOG_API_URL');
+        if (empty($apiUrl)) {
+            throw new \Exception('ASKDIALOG_API_URL configuration is missing. Please reinstall the module.');
+        }
+
+        $this->httpClient = HttpClient::create([
+            'base_uri' => $apiUrl,
+            'headers' => [
+                'Authorization' => $apiKey,
+                'Content-Type' => 'application/json',
+            ],
+            'timeout' => 30,
+        ]);
     }
 
-    public function sendDomainHost()
+    /**
+     * Sends domain and PrestaShop version to Dialog API for validation
+     *
+     * @return array Response containing statusCode and body
+     *               ['statusCode' => int, 'body' => string]
+     */
+    public function sendDomainHost(): array
     {
-        $client = new Client([
-            'base_uri' => $this->urlApi,
-        ]);
-
-        $headers = [
-            'Authorization' => $this->apiKey,
-            'Content-Type' => 'application/json',
+        $body = [
+            'domain' => \Context::getContext()->shop->domain,
+            'version' => _PS_VERSION_,
         ];
 
-        $body = json_encode(['domain' => Context::getContext()->shop->domain, 'version' => _PS_VERSION_]);
-
-
         try {
-            $response = $client->post('/organization/validate', [
-                'headers' => $headers,
-                'body' => $body,
+            $response = $this->httpClient->request('POST', '/organization/validate', [
+                'json' => $body,
             ]);
 
-            $statusCode = $response->getStatusCode();
-            $responseBody = $response->getBody()->getContents();
-
             return [
-                'statusCode' => $statusCode,
-                'body' => $responseBody,
+                'statusCode' => $response->getStatusCode(),
+                'body' => $response->getContent(),
             ];
-        } catch (RequestException $e) {
+        } catch (HttpExceptionInterface $e) {
             return [
                 'statusCode' => $e->getResponse()->getStatusCode(),
                 'body' => $e->getMessage(),
             ];
+        } catch (TransportExceptionInterface $e) {
+            return [
+                'statusCode' => 500,
+                'body' => 'Transport error: ' . $e->getMessage(),
+            ];
         }
     }
 
-    public function prepareServerTransfer()
+    /**
+     * Requests signed S3 upload URLs from Dialog API for catalog transfer
+     *
+     * @return array Response containing statusCode and body with upload URLs
+     *               ['statusCode' => int, 'body' => string (JSON)]
+     */
+    public function prepareServerTransfer(): array
     {
-        $client = new Client([
-            'base_uri' => $this->urlApi,
-        ]);
-
-        $headers = [
-            'Authorization' => $this->apiKey,
-            'Content-Type' => 'application/json',
+        $body = [
+            'fileType' => 'catalog',
         ];
 
-        $body = json_encode(['fileType' => 'catalog']);
-
         try {
-            $response = $client->post('/organization/catalog-upload-url', [
-                'headers' => $headers,
-                'body' => $body,
+            $response = $this->httpClient->request('POST', '/organization/catalog-upload-url', [
+                'json' => $body,
             ]);
 
-            $statusCode = $response->getStatusCode();
-            $responseBody = $response->getBody()->getContents();
-
             return [
-                'statusCode' => $statusCode,
-                'body' => $responseBody,
+                'statusCode' => $response->getStatusCode(),
+                'body' => $response->getContent(),
             ];
-        } catch (RequestException $e) {
+        } catch (HttpExceptionInterface $e) {
             return [
                 'statusCode' => $e->getResponse()->getStatusCode(),
                 'body' => $e->getMessage(),
+            ];
+        } catch (TransportExceptionInterface $e) {
+            return [
+                'statusCode' => 500,
+                'body' => 'Transport error: ' . $e->getMessage(),
             ];
         }
     }

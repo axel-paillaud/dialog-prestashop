@@ -1,217 +1,247 @@
 <?php
+/*
+* 2007-2025 Dialog
+*
+* NOTICE OF LICENSE
+*
+* This source file is subject to the Academic Free License (AFL 3.0)
+* that is bundled with this package in the file LICENSE.txt.
+* It is also available through the world-wide-web at this URL:
+* http://opensource.org/licenses/afl-3.0.php
+*
+* DISCLAIMER
+*
+* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+* versions in the future. If you wish to customize PrestaShop for your
+* needs please refer to http://www.prestashop.com for more information.
+*
+*  @author Axel Paillaud <contact@axelweb.fr>
+*  @copyright  2007-2025 Dialog
+*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+*/
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
 use Dialog\AskDialog\Service\DataGenerator;
 use Dialog\AskDialog\Service\AskDialogClient;
-use PSpell\Config;
+use Dialog\AskDialog\Helper\PathHelper;
+use Dialog\AskDialog\Trait\JsonResponseTrait;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\Mime\Part\DataPart;
+use Symfony\Component\Mime\Part\Multipart\FormDataPart;
+use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
+/**
+ * Class AskDialogFeedModuleFrontController
+ *
+ * Handles catalog data export and upload to Dialog AI platform via S3
+ */
 class AskDialogFeedModuleFrontController extends ModuleFrontController
 {
+    use JsonResponseTrait;
+
+    /**
+     * Initialize controller and verify API key authentication
+     */
     public function initContent()
     {
         parent::initContent();
-        //Check if token is valid
+
+        // Check if token is valid
         $headers = getallheaders();
-        
-        if (substr($headers['Authorization'], 0, 6) !== 'Token ') {
-            http_response_code(401); // Unauthorized
-            die(json_encode(["error" => "Private API Token is missing"]));
-        } else {
-            if($headers['Authorization'] != "Token ".Configuration::get('ASKDIALOG_API_KEY')){
-                http_response_code(403); // Forbidden
-                die(json_encode(["error" => "Private API Token is wrong"]));
-            }
+
+        if (!isset($headers['Authorization']) || substr($headers['Authorization'], 0, 6) !== 'Token ') {
+            $this->sendJsonResponse(['error' => 'Private API Token is missing'], 401);
         }
+
+        if ($headers['Authorization'] !== 'Token ' . Configuration::get('ASKDIALOG_API_KEY')) {
+            $this->sendJsonResponse(['error' => 'Private API Token is wrong'], 403);
+        }
+
         $this->ajax = true;
     }
 
-    public function sendFileToUrl($url, $fields, $tempFile, $filename, $client) {
-        $data = ['multipart' => array_merge(
-            array_map(function($name, $contents) {                
-                return [
-                    'name'     => $name,
-                    'contents' => $contents,
-                ];
-            }, array_keys($fields), $fields),
-            [
-                [
-                    'name'     => 'file',
-                    'contents' => fopen($tempFile, 'r'),
-                    'filename' => $filename,
-                ]
-            ]
-        )];
-        $data['multipart'][] = [
-            'name'=> 'Content-Type',
-            'contents' => 'application/json'
-        ];
+    /**
+     * Sends a file to S3 using signed URL with multipart/form-data
+     *
+     * @param string $url S3 signed URL
+     * @param array $fields Additional form fields (from S3 signature)
+     * @param string $tempFile Path to file to upload
+     * @param string $filename Original filename
+     * @return \Symfony\Contracts\HttpClient\ResponseInterface
+     * @throws TransportExceptionInterface
+     */
+    private function sendFileToS3($url, $fields, $tempFile, $filename)
+    {
+        $httpClient = HttpClient::create(['verify_peer' => false]);
 
-        return $client->post($url, $data);
+        // Build form fields
+        $formFields = $fields;
+        $formFields['file'] = DataPart::fromPath($tempFile, $filename);
+
+        // Create multipart form
+        $formData = new FormDataPart($formFields);
+        $headers = $formData->getPreparedHeaders()->toArray();
+
+        return $httpClient->request('POST', $url, [
+            'headers' => $headers,
+            'body' => $formData->bodyToString(),
+        ]);
     }
 
+    /**
+     * Main AJAX handler for feed actions
+     */
     public function displayAjax()
     {
-        //Get action from the post request in Json
         $action = Tools::getValue('action');
         $dataGenerator = new DataGenerator();
-        $batchSize = Configuration::get('ASKDIALOG_BATCH_SIZE');
 
         switch ($action) {
-            case 'sendAsyncCatalogData':
-                // Call the sendCatalogData action asynchronously
-                try {
-                    $url = $this->context->link->getModuleLink('askdialog', 'feed', ['action' => 'sendCatalogData']);
-                    $client = new Client(['verify' => false]);
-                    $response = $client->postAsync($url, [
-                        'headers' => [
-                            'Authorization' => 'Token ' . Configuration::get('ASKDIALOG_API_KEY'),
-                        ],
-                    ])->then(
-                        function ($response) {
-                            return $response->getBody()->getContents();
-                        },
-                        function ($exception) {
-                            throw new Exception('Error during async request: ' . $exception->getMessage());
-                        }
-                    )->wait();
-
-                    $response = array('status' => 'success', 'message' => 'Async catalog data sent successfully', 'response' => $response);
-                    die(json_encode($response));
-                } catch (Exception $e) {
-                    http_response_code(500); // Internal Server Error
-                    $response = array('status' => 'error', 'message' => 'Exception while sending async data: ' . $e->getMessage());
-                    die(json_encode($response));
-                }
             case 'sendCatalogData':
-                $numRemaining = $dataGenerator->getNumCatalogRemaining(Configuration::get('PS_SHOP_DEFAULT'));
-                $dataCatalog = $dataGenerator->getCatalogDataForBatch($batchSize, Configuration::get('PS_SHOP_DEFAULT'));
-
-                if($numRemaining>0 && $numRemaining <= $batchSize){
-                    $this->generatePartialDataFile($dataCatalog);
-                    $numRemaining = $dataGenerator->getNumCatalogRemaining(Configuration::get('PS_SHOP_DEFAULT'));
-                }
-
-                if ($numRemaining == 0) {
-                    //Check if there are files in the temp folder
-                    $files = glob(_PS_MODULE_DIR_ . 'askdialog/temp/catalog_partial_*.json');
-                    //if there are files in this temp folder, load their content in a loop and check the JSON validity of each, then merge them all in one file
-                    if (!empty($files)) {
-                        $dataCatalog = [];
-                        foreach ($files as $file) {
-                            $dataCatalog = array_merge($dataCatalog, json_decode(file_get_contents($file), true));
-                        }
-                        //Delete all files in the temp folder
-                        array_map('unlink', glob(_PS_MODULE_DIR_ . 'askdialog/temp/*'));
-
-                        $filename = 'catalog_' . date('Ymd_His') . '.json';
-                        // Generate a temporary file to store the JSON data
-                        $tempFile = _PS_MODULE_DIR_ . 'askdialog/temp/'.$filename;
-                        file_put_contents($tempFile, json_encode($dataCatalog));
-                    }
-
-
-                    //Go for a new batch
-                    //Add all the products to generate to the database
-                    $sql = 'TRUNCATE TABLE ' . _DB_PREFIX_ . 'askdialog_product';
-                    Db::getInstance()->execute($sql);
-
-                    $products = Db::getInstance()->executeS('SELECT * FROM ' . _DB_PREFIX_ . 'product');
-                    foreach ($products as $product) {
-                        $sql = 'INSERT INTO ' . _DB_PREFIX_ . 'askdialog_product (id_product, id_shop) VALUES (' . (int)$product['id_product'] . ', ' . (int)Configuration::get('PS_SHOP_DEFAULT') . ')';
-                        Db::getInstance()->execute($sql);
-                    }
-                    
-                    if (empty($files)) {
-                        throw new Exception('No catalog files found to process.');
-                        break;
-                    }
-                    
-                    
-                }
-                else{
-                    //Prepare a partial file
-                    $this->generatePartialDataFile($dataCatalog);
-                    break;
-                }
-
-                //Generate cms pages export 
-                $dataGenerator->generateCMSData();
-                
-
-                //Prepare the server transfer
-                $askDialogClient = new AskDialogClient(Configuration::get('ASKDIALOG_API_KEY'));
-                $return = $askDialogClient->prepareServerTransfer();
-                $bodyPrepared = json_decode($return['body'], true);
-
-                $bodyCatalog = $bodyPrepared['catalogUploadUrl'];
-                $bodyPages = $bodyPrepared['pageUploadUrl'];
-                $bodyBlogPost = $bodyPrepared['blogPostUploadUrl'];
-    
-
-                
-                $client = new Client(['verify' => false]);
-                
-                try {
-                    // Send to Catalog URL
-                    $urlCatalog = $bodyCatalog['url'];
-                    $fieldsCatalog = $bodyCatalog['fields'];
-                    $responseCatalog = $this->sendFileToUrl($urlCatalog, $fieldsCatalog, $tempFile, $filename, $client);
-                    
-                    // Send to Pages URL
-                    $urlPages = $bodyPages['url'];
-                    $fieldsPages = $bodyPages['fields'];
-                    $tempsCmsFile = _PS_MODULE_DIR_ . 'askdialog/temp/cms.json';
-                    $responsePages = $this->sendFileToUrl($urlPages, $fieldsPages, $tempsCmsFile, 'cms.json', $client);
-
-                    // Check both responses
-                    if ($responseCatalog->getStatusCode() == 204 && $responsePages->getStatusCode() == 204) {
-                    //if ($responseCatalog->getStatusCode() == 204) {
-                        rename($tempFile, _PS_MODULE_DIR_ . 'askdialog/sent/' . $filename);
-                        $filenameCMS = 'cms_' . date('Ymd_His') . '.json';
-                        rename($tempsCmsFile, _PS_MODULE_DIR_ . 'askdialog/sent/'. $filenameCMS);
-                        $response = array('status' => 'success', 'message' => 'Catalog and Pages data sent successfully');
-                        die(json_encode($response));
-                    } else {
-                        $response = array('status' => 'error', 'message' => 'Error sending data');
-                        die(json_encode($response));
-                    }
-
-                } catch (RequestException $e) {
-                    http_response_code(500); // Internal Server Error
-                    echo "<pre>";
-                    if ($e->hasResponse()) {
-                        echo "Response Body:\n";
-                        echo $e->getResponse()->getBody()->getContents();
-                    }
-                    echo "</pre>";
-                    
-                    $response = array('status' => 'error', 'message' => 'Exception while sending data: ' . $e->getMessage());
-                    die(json_encode($response));
-                }
-
+                $this->handleCatalogExport($dataGenerator);
                 break;
-                
+
             default:
-                http_response_code(400); // Bad Request
-                $response = array('status' => 'error', 'message' => 'Invalid action');
-                die(json_encode($response));
+                $this->sendJsonResponse([
+                    'status' => 'error',
+                    'message' => 'Invalid action'
+                ], 400);
         }
     }
 
-    private function generatePartialDataFile($dataCatalog)
+    /**
+     * Handles catalog export: generate data, upload to S3
+     *
+     * @param DataGenerator $dataGenerator
+     */
+    private function handleCatalogExport($dataGenerator)
     {
-        $filename = 'catalog_partial_' . date('Ymd_His') . '.json';
-        // Generate a temporary file to store the JSON data
-        $tempFile = _PS_MODULE_DIR_ . 'askdialog/temp/' . $filename;
-        file_put_contents($tempFile, json_encode($dataCatalog));
+        try {
+            $idShop = (int)$this->context->shop->id;
+            $idLang = (int)$this->context->language->id;
+            $countryCode = $this->context->country->iso_code;
 
-        $sql = 'DELETE FROM ' . _DB_PREFIX_ . 'askdialog_product WHERE id_shop = ' . (int)Configuration::get('PS_SHOP_DEFAULT') . ' AND id_product IN (' . implode(',', array_column($dataCatalog, 'id')) . ')';
-        Db::getInstance()->execute($sql);
+            // Get all product IDs for current shop
+            $productIds = $this->getProductIdsForShop($idShop);
 
-        $dataGenerator = new DataGenerator();
-        if($dataGenerator->getNumCatalogRemaining(Configuration::get('PS_SHOP_DEFAULT'))>0){
-            die(json_encode(array('status' => 'success', 'message' => 'Partial data generated')));
+            if (empty($productIds)) {
+                throw new Exception('No products found for shop ID ' . $idShop);
+            }
+
+            // Generate catalog data
+            $catalogData = [];
+            $linkObj = new Link();
+
+            foreach ($productIds as $productId) {
+                $productData = $dataGenerator->getProductData($productId, $idLang, $linkObj, $countryCode);
+                if (!empty($productData)) {
+                    $catalogData[] = $productData;
+                }
+            }
+
+            if (empty($catalogData)) {
+                throw new Exception('No valid product data generated');
+            }
+
+            // Generate final catalog file
+            $filename = 'catalog_' . date('Ymd_His') . '.json';
+            $tempFile = PathHelper::getTmpDir() . $filename;
+            file_put_contents($tempFile, json_encode($catalogData));
+
+            // Generate CMS pages export
+            $dataGenerator->generateCMSData();
+
+            // Upload to S3
+            $this->uploadToS3($tempFile, $filename);
+
+        } catch (Exception $e) {
+            $this->sendJsonResponse([
+                'status' => 'error',
+                'message' => 'Exception while exporting data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all product IDs for a specific shop
+     *
+     * TODO: Move to a Repository class in future refactoring
+     *
+     * @param int $idShop Shop ID
+     * @return array Array of product IDs
+     */
+    private function getProductIdsForShop($idShop)
+    {
+        $sql = 'SELECT p.id_product
+                FROM ' . _DB_PREFIX_ . 'product p
+                INNER JOIN ' . _DB_PREFIX_ . 'product_shop ps ON p.id_product = ps.id_product
+                WHERE ps.id_shop = ' . (int)$idShop;
+
+        $results = Db::getInstance()->executeS($sql);
+
+        if (!$results) {
+            return [];
+        }
+
+        return array_column($results, 'id_product');
+    }
+
+    /**
+     * Uploads catalog and CMS files to S3
+     *
+     * @param string $tempFile Path to catalog JSON file
+     * @param string $filename Catalog filename
+     * @throws Exception
+     */
+    private function uploadToS3($tempFile, $filename)
+    {
+        // Get signed URLs from Dialog API
+        $askDialogClient = new AskDialogClient();
+        $result = $askDialogClient->prepareServerTransfer();
+
+        if ($result['statusCode'] !== 200) {
+            throw new Exception('Failed to get S3 upload URLs: ' . $result['body']);
+        }
+
+        $uploadUrls = json_decode($result['body'], true);
+        if ($uploadUrls === null) {
+            throw new Exception('Invalid response from prepareServerTransfer');
+        }
+
+        $bodyCatalog = $uploadUrls['catalogUploadUrl'];
+        $bodyPages = $uploadUrls['pageUploadUrl'];
+
+        try {
+            // Send catalog to S3
+            $urlCatalog = $bodyCatalog['url'];
+            $fieldsCatalog = $bodyCatalog['fields'];
+            $responseCatalog = $this->sendFileToS3($urlCatalog, $fieldsCatalog, $tempFile, $filename);
+
+            // Send CMS pages to S3
+            $urlPages = $bodyPages['url'];
+            $fieldsPages = $bodyPages['fields'];
+            $cmsFile = PathHelper::getTmpDir() . 'cms.json';
+            $responsePages = $this->sendFileToS3($urlPages, $fieldsPages, $cmsFile, 'cms.json');
+
+            // Check both uploads succeeded
+            if ($responseCatalog->getStatusCode() === 204 && $responsePages->getStatusCode() === 204) {
+                // Move files to sent folder
+                rename($tempFile, PathHelper::getSentDir() . $filename);
+                $filenameCMS = 'cms_' . date('Ymd_His') . '.json';
+                rename($cmsFile, PathHelper::getSentDir() . $filenameCMS);
+
+                $this->sendJsonResponse([
+                    'status' => 'success',
+                    'message' => 'Catalog and Pages data sent successfully'
+                ]);
+            } else {
+                throw new Exception('S3 upload failed - unexpected status code');
+            }
+
+        } catch (HttpExceptionInterface $e) {
+            throw new Exception('HTTP error during S3 upload: ' . $e->getMessage());
+        } catch (TransportExceptionInterface $e) {
+            throw new Exception('Network error during S3 upload: ' . $e->getMessage());
         }
     }
 }
