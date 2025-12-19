@@ -400,28 +400,30 @@ class DataGenerator{
         return $productItem;
     }
 
+    /**
+     * Get catalog data for all products in the shop
+     *
+     * @return array Array of product data formatted for Dialog AI
+     */
     public function getCatalogData(){
-        // Get all products
-        $products = \Db::getInstance()->executeS('SELECT * FROM ' . _DB_PREFIX_ . 'product');
         $defaultLang = (int) \Configuration::get('PS_LANG_DEFAULT');
+        $idShop = (int)\Context::getContext()->shop->id;
         
-        // Extract product IDs
-        $productIds = array_column($products, 'id_product');
+        // Get all product IDs for the shop using Repository
+        $productIds = $this->productRepository->getProductIdsByShop($idShop);
         
         if (empty($productIds)) {
             return [];
         }
         
         // Bulk load all data upfront (crucial for performance and data availability)
-        $idShop = (int)\Context::getContext()->shop->id;
         $this->bulkLoadData($productIds, $defaultLang, $idShop);
 
         $linkObj = new \Link();
-        foreach($products as $product){
-            if (!empty($productData = $this->getProductData($product['id_product'], $defaultLang, $linkObj))) {
+        foreach($productIds as $productId){
+            if (!empty($productData = $this->getProductData($productId, $defaultLang, $linkObj))) {
                 $this->products[] = $productData;
 			}
-
         }
         return $this->products;
     }
