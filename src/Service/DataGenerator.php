@@ -421,8 +421,20 @@ class DataGenerator{
     }
 
     public function getCatalogData(){
+        // Get all products
         $products = \Db::getInstance()->executeS('SELECT * FROM ' . _DB_PREFIX_ . 'product');
         $defaultLang = (int) \Configuration::get('PS_LANG_DEFAULT');
+        
+        // Extract product IDs
+        $productIds = array_column($products, 'id_product');
+        
+        if (empty($productIds)) {
+            return [];
+        }
+        
+        // Bulk load all data upfront (crucial for performance and data availability)
+        $idShop = (int)\Context::getContext()->shop->id;
+        $this->bulkLoadData($productIds, $defaultLang, $idShop);
 
         $linkObj = new \Link();
         foreach($products as $product){
