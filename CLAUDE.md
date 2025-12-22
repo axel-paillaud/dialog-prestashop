@@ -91,8 +91,12 @@ AskDialog is a PrestaShop module that integrates conversational AI into e-commer
 - ✅ Added automatic cleanup: tmp/ (24h) and sent/ (keep 20 most recent)
 - ✅ PathHelper: Added generateUniqueFilename() and generateTmpFilePath()
 - ✅ PathHelper: Added cleanSentFiles() and cleanSentFilesKeepRecent()
+- ✅ Async HTTP response: Dialog API receives 202 Accepted in <1s (with PHP-FPM), export continues in background
+- ✅ JsonResponseTrait: Added sendJsonResponseAsync() for non-blocking responses
 
-**Performance:** 2,182x fewer queries, ~4x faster on real shop (500 products tested locally)
+**Performance:** 
+- 2,182x fewer queries, ~4x faster export (35s → ~10s on 25k products)
+- Dialog API response time: 15s → <1s (with PHP-FPM)
 
 ## TODO: Current Sprint
 
