@@ -192,6 +192,11 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
             throw new Exception('Invalid response from prepareServerTransfer');
         }
 
+        // Extract upload URLs (validate presence)
+        if (!isset($uploadUrls['catalogUploadUrl']) || !isset($uploadUrls['pageUploadUrl']) || !isset($uploadUrls['categoryUploadUrl'])) {
+            throw new Exception('Dialog API missing required upload URLs. Expected: catalogUploadUrl, pageUploadUrl, categoryUploadUrl');
+        }
+
         $bodyCatalog = $uploadUrls['catalogUploadUrl'];
         $bodyPages = $uploadUrls['pageUploadUrl'];
         $bodyCategory = $uploadUrls['categoryUploadUrl'];
