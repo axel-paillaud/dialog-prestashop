@@ -107,6 +107,104 @@ class DataGenerator{
     }
 
     /**
+     * Generates category data and saves to JSON file
+     *
+     * @param int $idLang Language ID
+     * @param int $idShop Shop ID
+     * @return string Path to generated JSON file
+     */
+    public function generateCategoryData($idLang, $idShop)
+    {
+        $categories = $this->categoryRepository->findAllForExport($idLang, $idShop);
+        $categoryTree = $this->buildCategoryTree($categories);
+
+        // Generate unique file path
+        $tmpFile = PathHelper::generateTmpFilePath('category');
+
+        // JSON optimized for LLM: unescaped unicode/slashes, pretty print for readability
+        $jsonData = json_encode(['categories' => $categoryTree], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        file_put_contents($tmpFile, $jsonData);
+
+        return $tmpFile;
+    }
+
+    /**
+     * Returns category data for API consumption (no file generation)
+     *
+     * @return array Category tree structure
+     */
+    public function getCategoryData()
+    {
+        $idShop = (int)\Context::getContext()->shop->id;
+        $idLang = (int)\Context::getContext()->language->id;
+
+        $categories = $this->categoryRepository->findAllForExport($idLang, $idShop);
+        return ['categories' => $this->buildCategoryTree($categories)];
+    }
+
+    /**
+     * Builds nested category tree from flat array
+     *
+     * @param array $categories Flat array of categories
+     * @return array Nested tree structure
+     */
+    private function buildCategoryTree($categories)
+    {
+        if (empty($categories)) {
+            return [];
+        }
+
+        // Build index by id_category and prepare children array
+        $index = [];
+        foreach ($categories as $category) {
+            $category['children'] = [];
+            $category['url'] = '/' . $category['id_category'] . '-' . $category['link_rewrite'];
+            
+            // Remove internal fields not needed for LLM
+            unset($category['link_rewrite']);
+            unset($category['position']);
+            
+            $index[$category['id_category']] = $category;
+        }
+
+        // Build tree by attaching children to parents
+        $roots = [];
+        foreach ($index as $id => &$category) {
+            $parentId = $category['id_parent'];
+            
+            if (isset($index[$parentId])) {
+                // Attach to parent
+                $index[$parentId]['children'][] = &$category;
+            } else {
+                // Root category (no parent or parent not in active categories)
+                $roots[] = &$category;
+            }
+        }
+        
+        // Remove id_parent from output (redundant in nested structure)
+        $this->removeParentIds($roots);
+
+        return $roots;
+    }
+
+    /**
+     * Recursively remove id_parent field from category tree
+     *
+     * @param array &$categories Category tree (by reference)
+     * @return void
+     */
+    private function removeParentIds(&$categories)
+    {
+        foreach ($categories as &$category) {
+            unset($category['id_parent']);
+            
+            if (!empty($category['children'])) {
+                $this->removeParentIds($category['children']);
+            }
+        }
+    }
+
+    /**
      * Bulk load all data for multiple products
      *
      * @param array $productIds Array of product IDs
