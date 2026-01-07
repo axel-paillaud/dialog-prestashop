@@ -75,10 +75,9 @@ class DataGenerator
     }
 
     /**
-     * Generates product catalog data merged with categories and saves to JSON file
+     * Generates product catalog data and saves to JSON file
      *
-     * Structure: { "categories": [...], "products": [...] }
-     * Products reference categories by name
+     * Products contain their categories directly
      *
      * @param int $idShop Shop ID
      * @param int $idLang Language ID
@@ -88,40 +87,7 @@ class DataGenerator
      */
     public function generateCatalogData($idShop, $idLang, $countryCode = 'fr')
     {
-        $productFile = $this->productExport->generateFile($idShop, $idLang, $countryCode);
-        $categoriesData = $this->categoryExport->getData($idShop, $idLang);
-        
-        return $this->mergeCatalogWithCategories($productFile, $categoriesData);
-    }
-
-    /**
-     * Merges product file with categories data into a single JSON file
-     *
-     * @param string $productFile Path to temporary product JSON file
-     * @param array $categoriesData Categories data array
-     * @return string Path to merged JSON file
-     */
-    private function mergeCatalogWithCategories($productFile, $categoriesData)
-    {
-        // Read products from file
-        $productsJson = file_get_contents($productFile);
-        $productsData = json_decode($productsJson, true);
-
-        // Merge into single structure
-        $mergedData = [
-            'categories' => $categoriesData['categories'],
-            'products' => $productsData
-        ];
-
-        // Generate merged JSON file
-        $tmpFile = PathHelper::generateTmpFilePath('catalog');
-        $jsonData = json_encode($mergedData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-        file_put_contents($tmpFile, $jsonData);
-
-        // Clean up temporary product file
-        unlink($productFile);
-
-        return $tmpFile;
+        return $this->productExport->generateFile($idShop, $idLang, $countryCode);
     }
 
     /**
