@@ -56,7 +56,7 @@ class CategoryExportService
         $tmpFile = PathHelper::generateTmpFilePath('category');
 
         // JSON optimized for LLM: unescaped unicode/slashes, pretty print for readability
-        $jsonData = json_encode(['categories' => $categoryTree], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        $jsonData = json_encode($categoryTree, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
         file_put_contents($tmpFile, $jsonData);
 
         return $tmpFile;
@@ -72,7 +72,7 @@ class CategoryExportService
     public function getData($idShop, $idLang)
     {
         $categories = $this->categoryRepository->findAllForExport($idLang, $idShop);
-        return ['categories' => $this->buildCategoryTree($categories)];
+        return $this->buildCategoryTree($categories);
     }
 
     /**
@@ -92,11 +92,11 @@ class CategoryExportService
         foreach ($categories as $category) {
             $category['children'] = [];
             $category['url'] = '/' . $category['id_category'] . '-' . $category['link_rewrite'];
-            
+
             // Remove internal fields not needed for LLM
             unset($category['link_rewrite']);
             unset($category['position']);
-            
+
             $index[$category['id_category']] = $category;
         }
 
@@ -104,7 +104,7 @@ class CategoryExportService
         $roots = [];
         foreach ($index as $id => &$category) {
             $parentId = $category['id_parent'];
-            
+
             if (isset($index[$parentId])) {
                 // Attach to parent
                 $index[$parentId]['children'][] = &$category;
@@ -113,7 +113,7 @@ class CategoryExportService
                 $roots[] = &$category;
             }
         }
-        
+
         // Remove id_parent from output (redundant in nested structure)
         $this->removeParentIds($roots);
 
@@ -130,7 +130,7 @@ class CategoryExportService
     {
         foreach ($categories as &$category) {
             unset($category['id_parent']);
-            
+
             if (!empty($category['children'])) {
                 $this->removeParentIds($category['children']);
             }
