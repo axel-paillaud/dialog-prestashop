@@ -49,12 +49,13 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
 
         // Check if token is valid
         $headers = getallheaders();
+        $authHeader = $this->getHeaderCaseInsensitive($headers, 'Authorization');
 
-        if (!isset($headers['Authorization']) || substr($headers['Authorization'], 0, 6) !== 'Token ') {
+        if ($authHeader === null || substr($authHeader, 0, 6) !== 'Token ') {
             $this->sendJsonResponse(['error' => 'Private API Token is missing'], 401);
         }
 
-        if ($headers['Authorization'] !== 'Token ' . Configuration::get('ASKDIALOG_API_KEY')) {
+        if ($authHeader !== 'Token ' . Configuration::get('ASKDIALOG_API_KEY')) {
             $this->sendJsonResponse(['error' => 'Private API Token is wrong'], 403);
         }
 
