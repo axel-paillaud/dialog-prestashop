@@ -121,7 +121,7 @@ class AskDialog extends Module
 
     public function hookActionFrontControllerSetMedia()
     {
-        // Register CSS files
+        // Register CSS files (local files)
         if ($this->context->controller instanceof \ProductController) {
             $this->context->controller->registerStylesheet(
                 'module-askdialog-product-style',
@@ -142,37 +142,49 @@ class AskDialog extends Module
             ]
         );
 
-        // Register JS files
+        // Register JS files from CDN
+        // Note: CDN URLs are temporary and will be updated in future versions
+        // Version parameter forces cache invalidation when module is updated
+        $jsParams = [
+            'position' => 'bottom',
+            'priority' => 200,
+            'server' => 'remote',
+            'version' => $this->version,
+            'attributes' => 'defer'
+        ];
+
+        // setupModal.js - all pages
         $this->context->controller->registerJavascript(
             'module-askdialog-setupmodal',
-            'modules/' . $this->name . '/views/js/setupModal.js',
-            [
-                'position' => 'bottom',
-                'priority' => 200,
-            ]
+            'https://cdn.shopify.com/extensions/019b7023-644d-7d8b-a5ac-a3e0723c9970/dialog-ai-app-290/assets/setupModal.js',
+            $jsParams
         );
 
         // Load specific JS for product pages
         if ($this->context->controller instanceof \ProductController) {
+            // instant.js - product pages only
             $this->context->controller->registerJavascript(
                 'module-askdialog-instant',
-                'modules/' . $this->name . '/views/js/instant.js',
-                [
-                    'position' => 'bottom',
-                    'priority' => 200,
-                ]
+                'https://cdn.shopify.com/extensions/019b7023-644d-7d8b-a5ac-a3e0723c9970/dialog-ai-app-290/assets/instant.js',
+                $jsParams
             );
         } else {
+            // ai-input.js - all pages except product pages
             $this->context->controller->registerJavascript(
                 'module-askdialog-ai-input',
-                'modules/' . $this->name . '/views/js/ai-input.js',
-                [
-                    'position' => 'bottom',
-                    'priority' => 200,
-                ]
+                'https://cdn.shopify.com/extensions/019b7023-644d-7d8b-a5ac-a3e0723c9970/dialog-ai-app-290/assets/ai-input.js',
+                $jsParams
             );
         }
 
+        // index.js - all pages (main Dialog SDK from CDN)
+        $this->context->controller->registerJavascript(
+            'module-askdialog-index',
+            'https://d2zm7i5bmzo6ze.cloudfront.net/assets/index.js',
+            $jsParams
+        );
+
+        // askdialog.js - PrestaShop-specific cart integration (must stay local)
         $this->context->controller->registerJavascript(
             'module-askdialog-main',
             'modules/' . $this->name . '/views/js/askdialog.js',
