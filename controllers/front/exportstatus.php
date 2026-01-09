@@ -104,6 +104,11 @@ class AskDialogExportstatusModuleFrontController extends ModuleFrontController
         $idShop = (int)$this->context->shop->id;
         $exportType = Tools::getValue('export_type', ExportLogRepository::EXPORT_TYPE_CATALOG);
 
+        // Ensure we have a valid export type
+        if (empty($exportType)) {
+            $exportType = ExportLogRepository::EXPORT_TYPE_CATALOG;
+        }
+
         $latestExport = $exportLogRepo->findLatestByType($idShop, $exportType);
 
         if (!$latestExport) {
@@ -130,6 +135,11 @@ class AskDialogExportstatusModuleFrontController extends ModuleFrontController
         $idShop = (int)$this->context->shop->id;
         $limit = min((int)Tools::getValue('limit', 10), 100);
         $exportType = Tools::getValue('export_type');
+
+        // Convert empty string to null for proper filtering
+        if (empty($exportType)) {
+            $exportType = null;
+        }
 
         $history = $exportLogRepo->findLatestByShop($idShop, $limit, $exportType);
 
