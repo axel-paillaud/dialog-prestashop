@@ -213,7 +213,8 @@ Response:
 {
   "status": "success",
   "message": "Export logs older than 90 days have been deleted",
-  "days_kept": 90
+  "days_kept": 90,
+  "deleted_count": 15
 }
 ```
 

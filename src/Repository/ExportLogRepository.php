@@ -197,14 +197,16 @@ class ExportLogRepository extends AbstractRepository
      * Delete export logs older than specified days
      *
      * @param int $days Number of days to keep
-     * @return bool True on success
+     * @return int|false Number of deleted rows or false on failure
      */
     public function deleteOlderThan($days)
     {
         $sql = 'DELETE FROM `' . $this->getPrefix() . 'askdialog_export_log`
                 WHERE `started_at` < DATE_SUB(NOW(), INTERVAL ' . (int)$days . ' DAY)';
 
-        return $this->getDb()->execute($sql);
+        $result = $this->getDb()->execute($sql);
+
+        return $result ? (int)$this->getDb()->Affected_Rows() : false;
     }
 
     /**

@@ -234,13 +234,14 @@ class AskDialogExportstatusModuleFrontController extends ModuleFrontController
             $days = 365;
         }
 
-        $result = $exportLogRepo->deleteOlderThan($days);
+        $deletedCount = $exportLogRepo->deleteOlderThan($days);
 
-        if ($result) {
+        if ($deletedCount !== false) {
             $this->sendJsonResponse([
                 'status' => 'success',
                 'message' => 'Export logs older than ' . $days . ' days have been deleted',
-                'days_kept' => $days
+                'days_kept' => $days,
+                'deleted_count' => $deletedCount
             ]);
         } else {
             $this->sendJsonResponse([
