@@ -230,4 +230,28 @@ class ExportLogRepository extends AbstractRepository
 
         return $this->indexBy($results, 'status');
     }
+
+    /**
+     * Get all valid export types
+     *
+     * @return array List of valid export types
+     */
+    public static function getValidExportTypes()
+    {
+        return [
+            self::EXPORT_TYPE_CATALOG,
+            self::EXPORT_TYPE_CMS
+        ];
+    }
+
+    /**
+     * Check if export type is valid
+     *
+     * @param string $exportType Export type to validate
+     * @return bool True if valid, false otherwise
+     */
+    public static function isValidExportType($exportType)
+    {
+        return in_array($exportType, self::getValidExportTypes(), true);
+    }
 }

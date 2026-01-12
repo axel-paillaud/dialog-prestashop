@@ -105,9 +105,12 @@ class AskDialogExportstatusModuleFrontController extends ModuleFrontController
         $idShop = (int)$this->context->shop->id;
         $exportType = Tools::getValue('export_type', ExportLogRepository::EXPORT_TYPE_CATALOG);
 
-        // Ensure we have a valid export type
-        if (empty($exportType)) {
-            $exportType = ExportLogRepository::EXPORT_TYPE_CATALOG;
+        // Validate export type against allowed values
+        if (!ExportLogRepository::isValidExportType($exportType)) {
+            $this->sendJsonResponse([
+                'status' => 'error',
+                'message' => 'Invalid export_type. Allowed values: catalog, cms'
+            ], 400);
         }
 
         $latestExport = $exportLogRepo->findLatestByType($idShop, $exportType);
@@ -140,6 +143,12 @@ class AskDialogExportstatusModuleFrontController extends ModuleFrontController
         // Convert empty string to null for proper filtering
         if (empty($exportType)) {
             $exportType = null;
+        } elseif (!ExportLogRepository::isValidExportType($exportType)) {
+            // Validate export type if provided
+            $this->sendJsonResponse([
+                'status' => 'error',
+                'message' => 'Invalid export_type. Allowed values: catalog, cms'
+            ], 400);
         }
 
         $history = $exportLogRepo->findLatestByShop($idShop, $limit, $exportType);
