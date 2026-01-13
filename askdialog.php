@@ -209,27 +209,6 @@ class AskDialog extends Module
                 'priority' => 200,
             ]
         );
-
-        $this->context->controller->registerJavascript(
-            'module-askdialog-posthog',
-            'modules/' . $this->name . '/views/js/posthog.js',
-            [
-                'position' => 'bottom',
-                'priority' => 200,
-            ]
-        );
-
-        // Load PostHog order confirmation script on order confirmation page
-        if ($this->context->controller instanceof \OrderConfirmationController) {
-            $this->context->controller->registerJavascript(
-                'module-askdialog-posthog-order',
-                'modules/' . $this->name . '/views/js/posthog_order_confirmation.js',
-                [
-                    'position' => 'bottom',
-                    'priority' => 200,
-                ]
-            );
-        }
     }
 
     public function hookDisplayOrderConfirmation($params)
