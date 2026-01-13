@@ -27,7 +27,7 @@ if (!defined('_PS_VERSION_')) {
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Dialog\AskDialog\Service\AskDialogClient;
-use Dialog\AskDialog\Service\DataGenerator;
+use Dialog\AskDialog\Service\PostHogService;
 
 class AskDialog extends Module
 {
@@ -73,6 +73,8 @@ class AskDialog extends Module
             && $this->registerHook('displayProductAdditionalInfo')
             && $this->registerHook('actionFrontControllerInitBefore')
             && $this->registerHook('displayOrderConfirmation')
+            && $this->registerHook('actionCartUpdateQuantityBefore')
+            && $this->registerHook('actionValidateOrder')
             && $this->setDefaultConfigurationValues();
     }
 
@@ -122,7 +124,7 @@ class AskDialog extends Module
 
     public function hookActionFrontControllerSetMedia()
     {
-        // Register CSS files
+        // Register CSS files (local files)
         if ($this->context->controller instanceof \ProductController) {
             $this->context->controller->registerStylesheet(
                 'module-askdialog-product-style',
@@ -143,37 +145,62 @@ class AskDialog extends Module
             ]
         );
 
-        // Register JS files
-        $this->context->controller->registerJavascript(
-            'module-askdialog-setupmodal',
-            'modules/' . $this->name . '/views/js/setupModal.js',
-            [
-                'position' => 'bottom',
-                'priority' => 200,
-            ]
-        );
+        // Register JS files from CDN
+        // Note: CDN URLs are temporary and will be updated in future versions
+        // Version parameter forces cache invalidation when module is updated
+        $jsParams = [
+            'position' => 'bottom',
+            'priority' => 200,
+            'server' => 'remote',
+            'version' => $this->version,
+            'attributes' => 'defer'
+        ];
 
-        // Load specific JS for product pages
+        // Shopify compatibility patch - MUST load before instant.js (product pages only)
+        // This monkey-patches fetch/XMLHttpRequest to redirect Shopify API calls to PrestaShop endpoints
         if ($this->context->controller instanceof \ProductController) {
             $this->context->controller->registerJavascript(
-                'module-askdialog-instant',
-                'modules/' . $this->name . '/views/js/instant.js',
+                'module-askdialog-shopify-compat-patch',
+                'modules/' . $this->name . '/views/js/shopify-compat-patch.js',
                 [
                     'position' => 'bottom',
-                    'priority' => 200,
-                ]
-            );
-        } else {
-            $this->context->controller->registerJavascript(
-                'module-askdialog-ai-input',
-                'modules/' . $this->name . '/views/js/ai-input.js',
-                [
-                    'position' => 'bottom',
-                    'priority' => 200,
+                    'priority' => 190,
                 ]
             );
         }
 
+        // setupModal.js - all pages
+        $this->context->controller->registerJavascript(
+            'module-askdialog-setupmodal',
+            'https://cdn.shopify.com/extensions/019b7023-644d-7d8b-a5ac-a3e0723c9970/dialog-ai-app-290/assets/setupModal.js',
+            $jsParams
+        );
+
+        // Load specific JS for product pages
+        if ($this->context->controller instanceof \ProductController) {
+            // instant.js - product pages only
+            $this->context->controller->registerJavascript(
+                'module-askdialog-instant',
+                'https://cdn.shopify.com/extensions/019b7023-644d-7d8b-a5ac-a3e0723c9970/dialog-ai-app-290/assets/instant.js',
+                $jsParams
+            );
+        } else {
+            // ai-input.js - all pages except product pages
+            $this->context->controller->registerJavascript(
+                'module-askdialog-ai-input',
+                'https://cdn.shopify.com/extensions/019b7023-644d-7d8b-a5ac-a3e0723c9970/dialog-ai-app-290/assets/ai-input.js',
+                $jsParams
+            );
+        }
+
+        // index.js - all pages (main Dialog SDK from CDN)
+        $this->context->controller->registerJavascript(
+            'module-askdialog-index',
+            'https://d2zm7i5bmzo6ze.cloudfront.net/assets/index.js',
+            $jsParams
+        );
+
+        // askdialog.js - PrestaShop-specific cart integration (must stay local)
         $this->context->controller->registerJavascript(
             'module-askdialog-main',
             'modules/' . $this->name . '/views/js/askdialog.js',
@@ -577,5 +604,82 @@ class AskDialog extends Module
             'ASKDIALOG_HIGHLIGHT_PRODUCT_NAME' => Configuration::get('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME', false),
             'ASKDIALOG_BATCH_SIZE' => Configuration::get('ASKDIALOG_BATCH_SIZE', 1000000)
         ];
+    }
+
+    /**
+     * Hook: actionCartUpdateQuantityBefore
+     *
+     * Triggered before cart quantity is updated (product added/removed)
+     * Tracks add to cart events to PostHog (increments only, not decrements)
+     *
+     * @param array $params Hook parameters
+     */
+    public function hookActionCartUpdateQuantityBefore($params)
+    {
+        // Only track additions (not removals)
+        if (!isset($params['operator']) || $params['operator'] !== 'up') {
+            return;
+        }
+
+        // Only track positive quantities
+        $quantity = isset($params['quantity']) ? (int) $params['quantity'] : 0;
+        if ($quantity <= 0) {
+            return;
+        }
+
+        // Get product and cart
+        $product = isset($params['product']) ? $params['product'] : null;
+        $cart = isset($params['cart']) ? $params['cart'] : $this->context->cart;
+
+        if (!$product || !Validate::isLoadedObject($product)) {
+            return;
+        }
+
+        if (!$cart || !Validate::isLoadedObject($cart)) {
+            return;
+        }
+
+        // Get product attribute (combination ID)
+        $idProductAttribute = isset($params['id_product_attribute']) ? (int) $params['id_product_attribute'] : 0;
+
+        // Track to PostHog
+        try {
+            $postHogService = new PostHogService();
+            $postHogService->trackAddToCart(
+                (int) $product->id,
+                $idProductAttribute,
+                $quantity,
+                $cart
+            );
+        } catch (\Exception $e) {
+            // Log error but don't break cart functionality
+            \PrestaShopLogger::addLog(
+                'PostHog trackAddToCart error: ' . $e->getMessage(),
+                3,
+                null,
+                'AskDialog'
+            );
+        }
+    }
+
+    /**
+     * Hook: actionValidateOrder
+     *
+     * Triggered when an order is validated (payment confirmed)
+     * Tracks order confirmation events to PostHog
+     *
+     * @param array $params Hook parameters containing order information
+     */
+    public function hookActionValidateOrder($params)
+    {
+        $order = isset($params['order']) ? $params['order'] : null;
+
+        if (!$order || !Validate::isLoadedObject($order)) {
+            return;
+        }
+
+        // Track to PostHog
+        $postHogService = new PostHogService();
+        $postHogService->trackOrderConfirmation($order);
     }
 }
