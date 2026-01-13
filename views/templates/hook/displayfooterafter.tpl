@@ -27,5 +27,3 @@
         }
     });
 </script>
-
-<script src="https://d2zm7i5bmzo6ze.cloudfront.net/assets/index.js" type="module" defer></script>
