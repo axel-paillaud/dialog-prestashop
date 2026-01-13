@@ -26,8 +26,6 @@
     function rewriteShopifyUrl(url) {
         // Handle product-questions endpoint
         if (SHOPIFY_PATTERNS.productQuestions.test(url)) {
-            console.log('[AskDialog] Intercepted Shopify API call:', url);
-            
             // Extract query parameters from original URL
             const urlObj = new URL(url, window.location.origin);
             const params = urlObj.searchParams;
@@ -36,10 +34,8 @@
             const productId = params.get('productId') || window.DIALOG_PRODUCT_VARIABLES?.productId || '';
             
             // Build PrestaShop API endpoint
-            // Note: This returns suggestions data - adjust if your API structure differs
             const prestashopUrl = `${window.location.origin}/module/askdialog/api?action=getProductData&id_product=${productId}`;
             
-            console.log('[AskDialog] Rewriting to PrestaShop endpoint:', prestashopUrl);
             return prestashopUrl;
         }
 
@@ -62,7 +58,11 @@
             // Get public API key from Dialog global variables
             const publicApiKey = window.DIALOG_VARIABLES?.apiKey;
             if (publicApiKey) {
-                options.headers['Authorization'] = `Token ${publicApiKey}`;
+                // Ensure 'Token ' prefix (don't duplicate if already present)
+                const authToken = publicApiKey.startsWith('Token ') 
+                    ? publicApiKey 
+                    : `Token ${publicApiKey}`;
+                options.headers['Authorization'] = authToken;
             }
             
             resource = typeof resource === 'string' ? rewrittenUrl : new Request(rewrittenUrl, resource);
@@ -75,10 +75,31 @@
      * Monkey-patch XMLHttpRequest.prototype.open
      */
     const originalXHROpen = XMLHttpRequest.prototype.open;
+    const originalXHRSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+    
     XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
         const rewrittenUrl = rewriteShopifyUrl(url);
+        
+        // Store if this is a rewritten URL to add auth header later
+        this._isRewrittenShopifyUrl = rewrittenUrl !== url;
+        
         return originalXHROpen.apply(this, [method, rewrittenUrl, async, user, password]);
     };
-
-    console.log('[AskDialog] Shopify compatibility patch loaded successfully');
+    
+    XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+        // If this is a rewritten Shopify URL, add Authorization header
+        if (this._isRewrittenShopifyUrl && !this._authHeaderSet) {
+            const publicApiKey = window.DIALOG_VARIABLES?.apiKey;
+            if (publicApiKey) {
+                // Ensure 'Token ' prefix (don't duplicate if already present)
+                const authToken = publicApiKey.startsWith('Token ') 
+                    ? publicApiKey 
+                    : `Token ${publicApiKey}`;
+                originalXHRSetRequestHeader.call(this, 'Authorization', authToken);
+                this._authHeaderSet = true;
+            }
+        }
+        
+        return originalXHRSetRequestHeader.apply(this, [header, value]);
+    };
 })();
