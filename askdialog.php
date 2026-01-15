@@ -32,6 +32,16 @@ use Dialog\AskDialog\Service\DataGenerator;
 
 class AskDialog extends Module
 {
+    /**
+     * Dialog API base URL
+     */
+    private const DIALOG_API_URL = 'https://rtbzcxkmwj.execute-api.eu-west-1.amazonaws.com';
+
+    /**
+     * Dialog SDK CDN URL
+     */
+    private const DIALOG_SDK_CDN_URL = 'https://d2zm7i5bmzo6ze.cloudfront.net/assets/index.js';
+
     public function __construct()
     {
         $this->name = 'askdialog';
@@ -74,7 +84,7 @@ class AskDialog extends Module
             && $this->registerHook('displayProductAdditionalInfo')
             && $this->registerHook('actionFrontControllerInitBefore')
             && $this->registerHook('displayOrderConfirmation')
-            && \Configuration::updateValue('ASKDIALOG_API_URL', 'https://rtbzcxkmwj.execute-api.eu-west-1.amazonaws.com');
+            && \Configuration::updateValue('ASKDIALOG_API_URL', self::DIALOG_API_URL);
     }
 
     public function uninstall()
@@ -256,9 +266,6 @@ class AskDialog extends Module
         $idShop = (int) $this->context->shop->id;
         $appearanceSettings = $appearanceRepository->getSettings($idShop);
 
-        // CDN URL for Dialog SDK
-        $indexDotJsCdnUrl = 'https://d2zm7i5bmzo6ze.cloudfront.net/assets/index.js';
-
         $this->context->smarty->assign([
             'module_dir' => $this->_path,
             'customer_id' => $customerId,
@@ -267,7 +274,7 @@ class AskDialog extends Module
             'language_code' => $languageCode,
             'language_name' => $languageName,
             'appearance_settings' => $appearanceSettings,
-            'index_dot_js_cdn_url' => $indexDotJsCdnUrl,
+            'index_dot_js_cdn_url' => self::DIALOG_SDK_CDN_URL,
         ]);
         
         return $this->display(__FILE__, 'views/templates/hook/displayfooterafter.tpl');
