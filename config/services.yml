@@ -1,0 +1,27 @@
+services:
+  _defaults:
+    public: true
+
+  # General form type
+  dialog.askdialog.form.type.general:
+    class: 'Dialog\AskDialog\Form\GeneralFormType'
+    parent: 'form.type.translatable.aware'
+    public: true
+    tags:
+      - { name: form.type }
+
+  dialog.askdialog.form.general_data_configuration:
+    class: 'Dialog\AskDialog\Form\GeneralDataConfiguration'
+    arguments: ['@prestashop.adapter.legacy.configuration']
+
+  dialog.askdialog.form.general_form_data_provider:
+    class: 'Dialog\AskDialog\Form\GeneralFormDataProvider'
+    arguments:
+      - '@dialog.askdialog.form.general_data_configuration'
+
+  dialog.askdialog.form.general_form_data_handler:
+    class: 'Dialog\AskDialog\Form\GeneralFormHandler'
+    arguments:
+      - '@form.factory'
+      - '@dialog.askdialog.form.general_form_data_provider'
+      - 'Dialog\AskDialog\Form\GeneralFormType'
