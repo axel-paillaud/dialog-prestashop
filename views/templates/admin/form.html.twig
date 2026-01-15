@@ -3,8 +3,6 @@
 {% form_theme generalForm '@PrestaShop/Admin/TwigTemplateForm/prestashop_ui_kit.html.twig' %}
 {% form_theme appearanceForm '@PrestaShop/Admin/TwigTemplateForm/prestashop_ui_kit.html.twig' %}
 
-{% set activeTab = app.request.query.get('tab', 'configuration') %}
-
 {% block content %}
 <div>
     <ul class="nav nav-tabs" role="tablist">

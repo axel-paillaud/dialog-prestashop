@@ -69,6 +69,7 @@ class AdminConfigurationController extends FrameworkBundleAdminController
         return $this->render('@Modules/askdialog/views/templates/admin/form.html.twig', [
             'generalForm' => $generalForm->createView(),
             'appearanceForm' => $appearanceForm->createView(),
+            'activeTab' => $activeTab,
         ]);
     }
 }
