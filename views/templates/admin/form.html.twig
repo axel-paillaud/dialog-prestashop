@@ -3,23 +3,25 @@
 {% form_theme generalForm '@PrestaShop/Admin/TwigTemplateForm/prestashop_ui_kit.html.twig' %}
 {% form_theme appearanceForm '@PrestaShop/Admin/TwigTemplateForm/prestashop_ui_kit.html.twig' %}
 
+{% set activeTab = app.request.query.get('tab', 'configuration') %}
+
 {% block content %}
 <div>
     <ul class="nav nav-tabs" role="tablist">
         <li class="nav-item">
-            <a class="nav-link active" id="configuration-tab" data-toggle="tab" href="#configuration" role="tab" aria-controls="configuration" aria-expanded="true" aria-selected="true">
+            <a class="nav-link {{ activeTab == 'configuration' ? 'active' : '' }}" id="configuration-tab" data-toggle="tab" href="#configuration" role="tab" aria-controls="configuration" aria-expanded="true" aria-selected="{{ activeTab == 'configuration' ? 'true' : 'false' }}">
                 <i class="material-icons">settings</i> {{ 'Configuration'|trans({}, 'Modules.Askdialog.Admin') }}
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" id="appearance-tab" data-toggle="tab" href="#appearance" role="tab" aria-controls="appearance" aria-expanded="false" aria-selected="false">
+            <a class="nav-link {{ activeTab == 'appearance' ? 'active' : '' }}" id="appearance-tab" data-toggle="tab" href="#appearance" role="tab" aria-controls="appearance" aria-expanded="{{ activeTab == 'appearance' ? 'true' : 'false' }}" aria-selected="{{ activeTab == 'appearance' ? 'true' : 'false' }}">
                 <i class="material-icons">palette</i> {{ 'Appearance'|trans({}, 'Modules.Askdialog.Admin') }}
             </a>
         </li>
     </ul>
 
     <div class="tab-content" id="tabContent">
-        <div class="tab-pane fade show active" id="configuration" role="tabpanel" aria-labelledby="configuration-tab">
+        <div class="tab-pane fade {{ activeTab == 'configuration' ? 'show active' : '' }}" id="configuration" role="tabpanel" aria-labelledby="configuration-tab">
             {{ form_start(generalForm) }}
             <div class="card">
                 <h3 class="card-header">
@@ -52,7 +54,7 @@
             {{ form_end(generalForm) }}
         </div>
 
-        <div class="tab-pane fade" id="appearance" role="tabpanel" aria-labelledby="appearance-tab">
+        <div class="tab-pane fade {{ activeTab == 'appearance' ? 'show active' : '' }}" id="appearance" role="tabpanel" aria-labelledby="appearance-tab">
             {{ form_start(appearanceForm) }}
             <div class="card">
                 <h3 class="card-header">

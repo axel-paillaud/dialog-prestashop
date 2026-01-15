@@ -39,13 +39,16 @@ class AdminConfigurationController extends FrameworkBundleAdminController
         $generalForm->handleRequest($request);
         $appearanceForm->handleRequest($request);
 
+        // Get active tab from query parameter (default: configuration)
+        $activeTab = $request->query->get('tab', 'configuration');
+
         if ($generalForm->isSubmitted() && $generalForm->isValid()) {
             $errors = $generalFormDataHandler->save($generalForm->getData());
 
             if (empty($errors)) {
                 $this->addFlash('success', $this->trans('Successful update.', 'Admin.Notifications.Success'));
 
-                return $this->redirectToRoute('askdialog_form_configuration');
+                return $this->redirectToRoute('askdialog_form_configuration', ['tab' => 'configuration']);
             }
 
             $this->flashErrors($errors);
@@ -57,7 +60,7 @@ class AdminConfigurationController extends FrameworkBundleAdminController
             if (empty($errors)) {
                 $this->addFlash('success', $this->trans('Successful update.', 'Admin.Notifications.Success'));
 
-                return $this->redirectToRoute('askdialog_form_configuration');
+                return $this->redirectToRoute('askdialog_form_configuration', ['tab' => 'appearance']);
             }
 
             $this->flashErrors($errors);
