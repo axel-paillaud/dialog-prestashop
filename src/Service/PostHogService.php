@@ -44,7 +44,7 @@ class PostHogService
     /**
      * PostHog project API key
      */
-    private const API_KEY = 'phc_WM5MRkqG7AiqOKeTmNKj0fNIl41ZOQex7wRhEswRlTA';
+    private const API_KEY = 'phc_EKMR6Jt4OTMEYmoUlz0v58KPwqcFxI7aZCLckpSD8Tv';
 
     /**
      * @var HttpClientInterface Symfony HTTP client instance
