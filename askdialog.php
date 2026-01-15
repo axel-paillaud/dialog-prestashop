@@ -26,6 +26,7 @@ if (!defined('_PS_VERSION_')) {
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+use Dialog\AskDialog\Repository\AppearanceRepository;
 use Dialog\AskDialog\Service\AskDialogClient;
 use Dialog\AskDialog\Service\DataGenerator;
 
@@ -262,39 +263,34 @@ class AskDialog extends Module
 
     public function hookDisplayFooterAfter($params)
     {
-        //Include view
-        $this->context->smarty->assign('module_dir', $this->_path);
         $customer = $this->context->customer;
         $customerId = $customer->isLogged() ? $customer->id : 'anonymous';
-        $this->context->smarty->assign('customer_id', $customerId);
-        $publicApiKey = Configuration::get('ASKDIALOG_API_KEY_PUBLIC');
+        
+        $publicApiKey = \Configuration::get('ASKDIALOG_API_KEY_PUBLIC');
         $countryCode = $this->context->country->iso_code;
         $languageCode = $this->context->language->iso_code;
-
         $languageName = $this->context->language->name;
-        $primaryColor = Configuration::get('ASKDIALOG_COLOR_PRIMARY');
-        $backgroundColor = Configuration::get('ASKDIALOG_COLOR_BACKGROUND');
-        $ctaTextColor = Configuration::get('ASKDIALOG_COLOR_CTA_TEXT');
-        $ctaBorderType = Configuration::get('ASKDIALOG_CTA_BORDER_TYPE');
-        $capitalizeCtas = Configuration::get('ASKDIALOG_CAPITALIZE_CTAS');
-        $fontFamily = Configuration::get('ASKDIALOG_FONT_FAMILY');
-        $highlightProductName = Configuration::get('ASKDIALOG_HIGHLIGHT_PRODUCT_NAME');
+
+        // Get appearance settings from database (JSON-based)
+        $appearanceRepository = new AppearanceRepository();
+        $idShop = (int) $this->context->shop->id;
+        $appearanceSettings = $appearanceRepository->getSettings($idShop);
+
+        // CDN URL for Dialog SDK
+        $indexDotJsCdnUrl = 'https://d2zm7i5bmzo6ze.cloudfront.net/assets/index.js';
 
         $this->context->smarty->assign([
+            'module_dir' => $this->_path,
+            'customer_id' => $customerId,
             'public_api_key' => $publicApiKey,
             'country_code' => $countryCode,
             'language_code' => $languageCode,
             'language_name' => $languageName,
-            'primary_color' => $primaryColor,
-            'background_color' => $backgroundColor,
-            'cta_text_color' => $ctaTextColor,
-            'cta_border_type' => $ctaBorderType,
-            'capitalize_ctas' => $capitalizeCtas,
-            'font_family' => $fontFamily,
-            'highlight_product_name' => $highlightProductName
+            'appearance_settings' => $appearanceSettings,
+            'index_dot_js_cdn_url' => $indexDotJsCdnUrl,
         ]);
+        
         return $this->display(__FILE__, 'views/templates/hook/displayfooterafter.tpl');
-
     }
 
     /**
