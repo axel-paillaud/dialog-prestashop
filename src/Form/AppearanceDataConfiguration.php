@@ -64,7 +64,7 @@ final class AppearanceDataConfiguration implements DataConfigurationInterface
         $normalized = $this->normalizeConfiguration($configuration);
 
         // Validate
-        $errors = $this->validateConfiguration($normalized);
+        $errors = $this->getValidationErrors($normalized);
         if (!empty($errors)) {
             return $errors;
         }
@@ -125,9 +125,21 @@ final class AppearanceDataConfiguration implements DataConfigurationInterface
      *
      * @param array $configuration Normalized configuration
      *
+     * @return bool True if valid, false otherwise
+     */
+    public function validateConfiguration(array $configuration): bool
+    {
+        return empty($this->getValidationErrors($configuration));
+    }
+
+    /**
+     * Get validation errors for configuration
+     *
+     * @param array $configuration Normalized configuration
+     *
      * @return array Array of error messages (empty if valid)
      */
-    public function validateConfiguration(array $configuration): array
+    private function getValidationErrors(array $configuration): array
     {
         $errors = [];
 
