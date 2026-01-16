@@ -135,7 +135,41 @@ class AskDialog extends Module
             );
         }
 
-        // Register JS files
+        $this->context->controller->registerStylesheet(
+            'module-askdialog-global-style',
+            'modules/' . $this->name . '/views/css/cssForAllPages.css',
+            [
+                'media' => 'all',
+                'priority' => 200,
+            ]
+        );
+
+        // Register JS files from CDN
+        // Note: CDN URLs are temporary and will be updated in future versions
+        // Version parameter forces cache invalidation when module is updated
+        $jsParams = [
+            'position' => 'bottom',
+            'priority' => 200,
+            'server' => 'remote',
+            'version' => $this->version,
+            'attributes' => 'defer'
+        ];
+
+        // Shopify compatibility patch - MUST load before instant.js (product pages only)
+        // This monkey-patches fetch/XMLHttpRequest to redirect Shopify API calls to PrestaShop endpoints
+        // WARNING: If additional Shopify errors appear, abandon this approach and create native implementation
+        if ($this->context->controller instanceof \ProductController) {
+            $this->context->controller->registerJavascript(
+                'module-askdialog-shopify-compat-patch',
+                'modules/' . $this->name . '/views/js/shopify-compat-patch.js',
+                [
+                    'position' => 'bottom',
+                    'priority' => 190, // Must load BEFORE instant.js (priority 200)
+                ]
+            );
+        }
+
+        // setupModal.js - all pages
         $this->context->controller->registerJavascript(
             'module-askdialog-setupmodal',
             'https://cdn.shopify.com/extensions/019b7023-644d-7d8b-a5ac-a3e0723c9970/dialog-ai-app-290/assets/setupModal.js',
@@ -160,6 +194,13 @@ class AskDialog extends Module
         }
 
         // index.js - all pages (main Dialog SDK from CDN)
+        $this->context->controller->registerJavascript(
+            'module-askdialog-index',
+            'https://d2zm7i5bmzo6ze.cloudfront.net/assets/index.js',
+            $jsParams
+        );
+
+        // askdialog.js - PrestaShop-specific cart integration (must stay local)
         $this->context->controller->registerJavascript(
             'module-askdialog-index',
             'https://d2zm7i5bmzo6ze.cloudfront.net/assets/index.js',
