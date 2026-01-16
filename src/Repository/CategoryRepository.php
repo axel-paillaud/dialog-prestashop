@@ -1,24 +1,25 @@
 <?php
-/*
-* 2007-2025 Dialog
-*
-* NOTICE OF LICENSE
-*
-* This source file is subject to the Academic Free License (AFL 3.0)
-* that is bundled with this package in the file LICENSE.txt.
-* It is also available through the world-wide-web at this URL:
-* http://opensource.org/licenses/afl-3.0.php
-*
-* DISCLAIMER
-*
-* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
-* versions in the future. If you wish to customize PrestaShop for your
-* needs please refer to http://www.prestashop.com for more information.
-*
-*  @author Axel Paillaud <contact@axelweb.fr>
-*  @copyright  2007-2025 Dialog
-*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
-*/
+/**
+ * 2026 Dialog
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License (AFL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/afl-3.0.php
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    Axel Paillaud <contact@axelweb.fr>
+ * @copyright 2026 Dialog
+ * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ */
+
 
 namespace Dialog\AskDialog\Repository;
 
@@ -41,7 +42,7 @@ class CategoryRepository extends AbstractRepository
             return [];
         }
 
-        $sql = 'SELECT 
+        $sql = 'SELECT
                     cp.id_product,
                     cp.id_category
                 FROM ' . $this->getPrefix() . 'category_product cp
@@ -75,7 +76,7 @@ class CategoryRepository extends AbstractRepository
         // Check if additional_description exists (PS 8+)
         $hasAdditionalDesc = $this->columnExists('category_lang', 'additional_description');
 
-        $sql = 'SELECT 
+        $sql = 'SELECT
                     c.id_category,
                     c.active,
                     cl.name,
@@ -83,8 +84,8 @@ class CategoryRepository extends AbstractRepository
                     ' . ($hasAdditionalDesc ? 'cl.additional_description,' : '') . '
                     cl.link_rewrite
                 FROM ' . $this->getPrefix() . 'category c
-                INNER JOIN ' . $this->getPrefix() . 'category_lang cl 
-                    ON c.id_category = cl.id_category 
+                INNER JOIN ' . $this->getPrefix() . 'category_lang cl
+                    ON c.id_category = cl.id_category
                     AND cl.id_lang = ' . (int) $idLang . '
                     AND cl.id_shop = ' . (int) $idShop . '
                 WHERE c.id_category IN (' . $this->escapeIds($categoryIds) . ')
@@ -109,7 +110,7 @@ class CategoryRepository extends AbstractRepository
      */
     public function findAllForExport($idLang, $idShop)
     {
-        $sql = 'SELECT 
+        $sql = 'SELECT
                     c.id_category,
                     c.id_parent,
                     cs.position,
@@ -120,8 +121,8 @@ class CategoryRepository extends AbstractRepository
                     cl.meta_title,
                     cl.meta_description
                 FROM ' . $this->getPrefix() . 'category c
-                INNER JOIN ' . $this->getPrefix() . 'category_lang cl 
-                    ON c.id_category = cl.id_category 
+                INNER JOIN ' . $this->getPrefix() . 'category_lang cl
+                    ON c.id_category = cl.id_category
                     AND cl.id_lang = ' . (int) $idLang . '
                     AND cl.id_shop = ' . (int) $idShop . '
                 INNER JOIN ' . $this->getPrefix() . 'category_shop cs
