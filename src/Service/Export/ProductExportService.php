@@ -269,11 +269,9 @@ class ProductExportService
             $idCountry = $countryObj::getByIso($countryCode);
             $addressObj->id_state = 0;
             $addressObj->postcode = '';
-            $addressObj->id_city = 0;
             $addressObj->id_manufacturer = 0;
             $addressObj->id_customer = 0;
             $addressObj->id = 0;
-            $addressObj->id_address = 0;
             $addressObj->id_country = $idCountry;
             $type = 'country';
             $taxManager = \TaxManagerFactory::getManager($addressObj, $type);
