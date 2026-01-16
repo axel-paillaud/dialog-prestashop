@@ -249,8 +249,8 @@ class AskDialog extends Module
         $product_slug = $product['link_rewrite'];
         $selected_variant_id = $product['id_product_attribute'];
         $assistant_name = $this->trans('AskDialog Assistant', [], 'Modules.Askdialog.Admin');
-        $assistant_description = $this->trans('Comment puis-je vous aider avec ce produit ?', [], 'Modules.Askdialog.Admin');
-        $ask_anything_placeholder = $this->trans('Comment puis-je vous aider avec ce produit ?', [], 'Modules.Askdialog.Admin');
+        $assistant_description = $this->trans('How can I help you with this product?', [], 'Modules.Askdialog.Admin');
+        $ask_anything_placeholder = $this->trans('How can I help you with this product?', [], 'Modules.Askdialog.Admin');
 
         $this->context->smarty->assign([
             'product_id' => $product_id,
