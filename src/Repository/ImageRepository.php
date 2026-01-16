@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Repository for product images
  * Handles bulk loading of product and combination images
- *
- * @package Dialog\AskDialog\Repository
  */
 class ImageRepository extends AbstractRepository
 {
@@ -35,6 +33,7 @@ class ImageRepository extends AbstractRepository
      *
      * @param array $productIds Array of product IDs
      * @param int $idShop Shop ID
+     *
      * @return array Grouped by id_product
      */
     public function findByProductIds(array $productIds, $idShop)
@@ -51,7 +50,7 @@ class ImageRepository extends AbstractRepository
                 FROM ' . $this->getPrefix() . 'image i
                 LEFT JOIN ' . $this->getPrefix() . 'image_shop ishop
                     ON i.id_image = ishop.id_image 
-                    AND ishop.id_shop = ' . (int)$idShop . '
+                    AND ishop.id_shop = ' . (int) $idShop . '
                 WHERE i.id_product IN (' . $this->escapeIds($productIds) . ')
                 ORDER BY i.id_product, i.position';
 
@@ -68,6 +67,7 @@ class ImageRepository extends AbstractRepository
      * Bulk load combination images
      *
      * @param array $combinationIds Array of combination IDs
+     *
      * @return array Grouped by id_product_attribute
      */
     public function findByCombinationIds(array $combinationIds)

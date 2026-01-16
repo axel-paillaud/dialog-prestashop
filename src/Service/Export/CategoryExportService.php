@@ -28,8 +28,6 @@ use Dialog\AskDialog\Repository\CategoryRepository;
 /**
  * Service responsible for category data export
  * Handles both file generation and API data retrieval
- *
- * @package Dialog\AskDialog\Service\Export
  */
 class CategoryExportService
 {
@@ -45,6 +43,7 @@ class CategoryExportService
      *
      * @param int $idLang Language ID
      * @param int $idShop Shop ID
+     *
      * @return string Path to generated JSON file
      */
     public function generateFile($idLang, $idShop)
@@ -67,11 +66,13 @@ class CategoryExportService
      *
      * @param int $idShop Shop ID
      * @param int $idLang Language ID
+     *
      * @return array Category tree structure
      */
     public function getData($idShop, $idLang)
     {
         $categories = $this->categoryRepository->findAllForExport($idLang, $idShop);
+
         return $this->buildCategoryTree($categories);
     }
 
@@ -79,6 +80,7 @@ class CategoryExportService
      * Builds nested category tree from flat array
      *
      * @param array $categories Flat array of categories
+     *
      * @return array Nested tree structure
      */
     private function buildCategoryTree($categories)
@@ -124,6 +126,7 @@ class CategoryExportService
      * Recursively remove id_parent field from category tree
      *
      * @param array &$categories Category tree (by reference)
+     *
      * @return void
      */
     private function removeParentIds(&$categories)

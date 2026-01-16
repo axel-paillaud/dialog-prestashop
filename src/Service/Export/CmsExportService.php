@@ -28,8 +28,6 @@ use Dialog\AskDialog\Repository\CmsRepository;
 /**
  * Service responsible for CMS pages export
  * Handles both file generation and API data retrieval
- *
- * @package Dialog\AskDialog\Service\Export
  */
 class CmsExportService
 {
@@ -44,12 +42,13 @@ class CmsExportService
      * Generates CMS pages data and saves to JSON file
      *
      * @param int|null $idLang Language ID (default: shop default language)
+     *
      * @return string Path to generated JSON file
      */
     public function generateFile($idLang = null)
     {
         if ($idLang === null) {
-            $idLang = (int)\Configuration::get('PS_LANG_DEFAULT');
+            $idLang = (int) \Configuration::get('PS_LANG_DEFAULT');
         }
 
         // Retrieve all CMS pages
@@ -59,7 +58,7 @@ class CmsExportService
         foreach ($cmsPages as $page) {
             $cmsData[] = [
                 'title' => $page['meta_title'],
-                'content' => $page['content']
+                'content' => $page['content'],
             ];
         }
 
@@ -77,12 +76,13 @@ class CmsExportService
      * Returns CMS pages data for API consumption (no file generation)
      *
      * @param int|null $idLang Language ID (default: shop default language)
+     *
      * @return array CMS pages data
      */
     public function getData($idLang = null)
     {
         if ($idLang === null) {
-            $idLang = (int)\Configuration::get('PS_LANG_DEFAULT');
+            $idLang = (int) \Configuration::get('PS_LANG_DEFAULT');
         }
 
         $cmsPages = $this->cmsRepository->findByLanguage($idLang);
@@ -91,7 +91,7 @@ class CmsExportService
         foreach ($cmsPages as $page) {
             $cmsData[] = [
                 'title' => $page['meta_title'],
-                'content' => $page['content']
+                'content' => $page['content'],
             ];
         }
 

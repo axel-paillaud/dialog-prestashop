@@ -77,6 +77,7 @@ final class AppearanceDataConfiguration implements DataConfigurationInterface
      * Normalize configuration values
      *
      * @param array $configuration Raw configuration from form
+     *
      * @return array Normalized configuration
      */
     private function normalizeConfiguration(array $configuration): array
@@ -117,6 +118,7 @@ final class AppearanceDataConfiguration implements DataConfigurationInterface
      * Validate configuration values
      *
      * @param array $configuration Normalized configuration
+     *
      * @return array Array of error messages (empty if valid)
      */
     public function validateConfiguration(array $configuration): array

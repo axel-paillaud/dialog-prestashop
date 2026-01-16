@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Repository for product features (characteristics)
  * Handles bulk loading of feature data
- *
- * @package Dialog\AskDialog\Repository
  */
 class FeatureRepository extends AbstractRepository
 {
@@ -35,6 +33,7 @@ class FeatureRepository extends AbstractRepository
      *
      * @param array $productIds Array of product IDs
      * @param int $idLang Language ID
+     *
      * @return array Grouped by id_product
      */
     public function findByProductIds(array $productIds, $idLang)
@@ -52,12 +51,12 @@ class FeatureRepository extends AbstractRepository
                     ON fp.id_feature = f.id_feature
                 INNER JOIN ' . $this->getPrefix() . 'feature_lang fl 
                     ON f.id_feature = fl.id_feature 
-                    AND fl.id_lang = ' . (int)$idLang . '
+                    AND fl.id_lang = ' . (int) $idLang . '
                 INNER JOIN ' . $this->getPrefix() . 'feature_value fv 
                     ON fp.id_feature_value = fv.id_feature_value
                 INNER JOIN ' . $this->getPrefix() . 'feature_value_lang fvl 
                     ON fv.id_feature_value = fvl.id_feature_value 
-                    AND fvl.id_lang = ' . (int)$idLang . '
+                    AND fvl.id_lang = ' . (int) $idLang . '
                 WHERE fp.id_product IN (' . $this->escapeIds($productIds) . ')
                 ORDER BY fp.id_product, f.position';
 

@@ -85,7 +85,7 @@ class AskDialogApiModuleFrontController extends ModuleFrontController
             default:
                 $this->sendJsonResponse([
                     'status' => 'error',
-                    'message' => 'Invalid action'
+                    'message' => 'Invalid action',
                 ], 400);
         }
     }
@@ -125,10 +125,10 @@ class AskDialogApiModuleFrontController extends ModuleFrontController
      */
     private function handleGetProductData($dataGenerator)
     {
-        $productId = (int)Tools::getValue('id_product');
+        $productId = (int) Tools::getValue('id_product');
 
         // Use context language and country by default
-        $idLang = (int)$this->context->language->id;
+        $idLang = (int) $this->context->language->id;
         $countryCode = $this->context->country->iso_code;
 
         // Allow override via parameters (for Dialog AI API calls)
@@ -142,7 +142,7 @@ class AskDialogApiModuleFrontController extends ModuleFrontController
             if (!$idLang) {
                 $this->sendJsonResponse([
                     'status' => 'error',
-                    'message' => 'Invalid country code or locale: ' . $paramCountryCode . '-' . $paramLocale
+                    'message' => 'Invalid country code or locale: ' . $paramCountryCode . '-' . $paramLocale,
                 ], 400);
             }
 

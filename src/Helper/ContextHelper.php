@@ -24,27 +24,28 @@ namespace Dialog\AskDialog\Helper;
 
 /**
  * Context Helper
- * 
+ *
  * Provides utility methods to ensure PrestaShop Context is properly synchronized
  */
 class ContextHelper
 {
     /**
      * Ensure Context::cart is properly loaded from the given Cart
-     * 
+     *
      * This prevents bugs when accessing the cart during hooks where Context
      * might not be synchronized yet (e.g., actionCartUpdateQuantityBefore).
-     * 
+     *
      * Note: PrestaShop's Context cart can be out of sync with the actual cart
      * due to cookie/session timing issues.
      *
      * @param \Cart $cart The cart to sync with Context
+     *
      * @return void
      */
     public static function syncContextCart(\Cart $cart)
     {
         $context = \Context::getContext();
-        
+
         // If Context cart is not loaded OR has a different ID, reload it
         if (!\Validate::isLoadedObject($context->cart) || $context->cart->id != $cart->id) {
             $context->cart = new \Cart($cart->id);

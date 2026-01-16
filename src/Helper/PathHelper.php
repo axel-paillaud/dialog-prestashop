@@ -24,11 +24,9 @@ namespace Dialog\AskDialog\Helper;
 
 /**
  * Class PathHelper
- * 
+ *
  * Provides centralized path management for module directories
  * Follows PrestaShop best practices by using /var/modules/ for temporary and dynamic files
- * 
- * @package Dialog\AskDialog\Helper
  */
 class PathHelper
 {
@@ -41,11 +39,11 @@ class PathHelper
     public static function getTmpDir(): string
     {
         $dir = _PS_ROOT_DIR_ . '/var/modules/askdialog/tmp/';
-        
+
         if (!file_exists($dir)) {
             mkdir($dir, 0775, true);
         }
-        
+
         return $dir;
     }
 
@@ -58,11 +56,11 @@ class PathHelper
     public static function getSentDir(): string
     {
         $dir = _PS_ROOT_DIR_ . '/var/modules/askdialog/sent/';
-        
+
         if (!file_exists($dir)) {
             mkdir($dir, 0775, true);
         }
-        
+
         return $dir;
     }
 
@@ -75,11 +73,11 @@ class PathHelper
     public static function getCacheDir(): string
     {
         $dir = _PS_ROOT_DIR_ . '/var/modules/askdialog/cache/';
-        
+
         if (!file_exists($dir)) {
             mkdir($dir, 0775, true);
         }
-        
+
         return $dir;
     }
 
@@ -87,6 +85,7 @@ class PathHelper
      * Cleans up temporary files older than specified age
      *
      * @param int $maxAge Maximum age in seconds (default: 24h)
+     *
      * @return int Number of files deleted
      */
     public static function cleanTmpFiles(int $maxAge = 86400): int
@@ -94,21 +93,21 @@ class PathHelper
         $count = 0;
         $tmpDir = self::getTmpDir();
         $files = glob($tmpDir . '*');
-        
+
         if ($files === false) {
             return 0;
         }
-        
+
         $now = time();
-        
+
         foreach ($files as $file) {
             if (is_file($file) && ($now - filemtime($file) > $maxAge)) {
                 if (unlink($file)) {
-                    $count++;
+                    ++$count;
                 }
             }
         }
-        
+
         return $count;
     }
 
@@ -117,6 +116,7 @@ class PathHelper
      * Useful to prevent sent/ directory from growing indefinitely
      *
      * @param int $maxAge Maximum age in seconds (default: 30 days = 2592000s)
+     *
      * @return int Number of files deleted
      */
     public static function cleanSentFiles(int $maxAge = 2592000): int
@@ -124,21 +124,21 @@ class PathHelper
         $count = 0;
         $sentDir = self::getSentDir();
         $files = glob($sentDir . '*');
-        
+
         if ($files === false) {
             return 0;
         }
-        
+
         $now = time();
-        
+
         foreach ($files as $file) {
             if (is_file($file) && ($now - filemtime($file) > $maxAge)) {
                 if (unlink($file)) {
-                    $count++;
+                    ++$count;
                 }
             }
         }
-        
+
         return $count;
     }
 
@@ -147,6 +147,7 @@ class PathHelper
      * Deletes older files to maintain a maximum number of archived exports
      *
      * @param int $keepCount Number of recent files to keep (default: 10)
+     *
      * @return int Number of files deleted
      */
     public static function cleanSentFilesKeepRecent(int $keepCount = 10): int
@@ -154,23 +155,23 @@ class PathHelper
         $count = 0;
         $sentDir = self::getSentDir();
         $files = glob($sentDir . '*');
-        
+
         if ($files === false || count($files) <= $keepCount) {
             return 0;
         }
-        
+
         // Sort files by modification time (newest first)
-        usort($files, function($a, $b) {
+        usort($files, function ($a, $b) {
             return filemtime($b) - filemtime($a);
         });
-        
+
         // Delete files beyond the keep count
-        for ($i = $keepCount; $i < count($files); $i++) {
+        for ($i = $keepCount; $i < count($files); ++$i) {
             if (is_file($files[$i]) && unlink($files[$i])) {
-                $count++;
+                ++$count;
             }
         }
-        
+
         return $count;
     }
 
@@ -185,6 +186,7 @@ class PathHelper
             self::getTmpDir();
             self::getSentDir();
             self::getCacheDir();
+
             return true;
         } catch (\Exception $e) {
             return false;
@@ -196,12 +198,14 @@ class PathHelper
      *
      * @param string $prefix Filename prefix (e.g., 'catalog', 'cms')
      * @param string $extension File extension (default: 'json')
+     *
      * @return string Generated filename (e.g., 'catalog_20250119_143025_a1b2c3d4.json')
      */
     public static function generateUniqueFilename(string $prefix, string $extension = 'json'): string
     {
         $timestamp = date('Ymd_His');
         $hash = substr(md5($timestamp . rand()), 0, 8);
+
         return $prefix . '_' . $timestamp . '_' . $hash . '.' . $extension;
     }
 
@@ -210,11 +214,13 @@ class PathHelper
      *
      * @param string $prefix Filename prefix (e.g., 'catalog', 'cms')
      * @param string $extension File extension (default: 'json')
+     *
      * @return string Full path to the file in tmp directory
      */
     public static function generateTmpFilePath(string $prefix, string $extension = 'json'): string
     {
         $filename = self::generateUniqueFilename($prefix, $extension);
+
         return self::getTmpDir() . $filename;
     }
 }

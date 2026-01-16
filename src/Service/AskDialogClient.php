@@ -31,8 +31,6 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Class AskDialogClient
  *
  * Handles HTTP communication with Dialog AI platform API
- *
- * @package Dialog\AskDialog\Service
  */
 class AskDialogClient
 {

@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Repository for stock availability
  * Handles bulk loading of product and combination stock data
- *
- * @package Dialog\AskDialog\Repository
  */
 class StockRepository extends AbstractRepository
 {
@@ -35,6 +33,7 @@ class StockRepository extends AbstractRepository
      *
      * @param array $productIds Array of product IDs
      * @param int $idShop Shop ID
+     *
      * @return array Indexed by id_product
      */
     public function findByProductIds(array $productIds, $idShop)
@@ -51,7 +50,7 @@ class StockRepository extends AbstractRepository
                 FROM ' . $this->getPrefix() . 'stock_available sa
                 WHERE sa.id_product IN (' . $this->escapeIds($productIds) . ')
                     AND sa.id_product_attribute = 0
-                    AND sa.id_shop = ' . (int)$idShop;
+                    AND sa.id_shop = ' . (int) $idShop;
 
         $results = $this->executeS($sql);
 
@@ -67,6 +66,7 @@ class StockRepository extends AbstractRepository
      *
      * @param array $combinationIds Array of combination IDs
      * @param int $idShop Shop ID
+     *
      * @return array Indexed by id_product_attribute
      */
     public function findByCombinationIds(array $combinationIds, $idShop)
@@ -83,7 +83,7 @@ class StockRepository extends AbstractRepository
                 FROM ' . $this->getPrefix() . 'stock_available sa
                 WHERE sa.id_product_attribute IN (' . $this->escapeIds($combinationIds) . ')
                     AND sa.id_product_attribute <> 0
-                    AND sa.id_shop = ' . (int)$idShop;
+                    AND sa.id_shop = ' . (int) $idShop;
 
         $results = $this->executeS($sql);
 

@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Repository for CMS pages data
  * Handles retrieval of CMS page information
- *
- * @package Dialog\AskDialog\Repository
  */
 class CmsRepository extends AbstractRepository
 {
@@ -34,6 +32,7 @@ class CmsRepository extends AbstractRepository
      * Get all CMS pages for a specific language
      *
      * @param int $idLang Language ID
+     *
      * @return array Array of CMS pages with meta_title and content
      */
     public function findByLanguage($idLang)
@@ -42,7 +41,7 @@ class CmsRepository extends AbstractRepository
                     cl.meta_title,
                     cl.content
                 FROM ' . $this->getPrefix() . 'cms_lang cl
-                WHERE cl.id_lang = ' . (int)$idLang;
+                WHERE cl.id_lang = ' . (int) $idLang;
 
         $results = $this->executeS($sql);
 

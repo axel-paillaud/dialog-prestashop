@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Abstract base class for all repositories
  * Provides common database access methods
- *
- * @package Dialog\AskDialog\Repository
  */
 abstract class AbstractRepository
 {
@@ -54,6 +52,7 @@ abstract class AbstractRepository
      * Execute SQL query and return all results
      *
      * @param string $sql SQL query
+     *
      * @return array|false
      */
     protected function executeS($sql)
@@ -65,6 +64,7 @@ abstract class AbstractRepository
      * Safely escape array of integers for SQL IN clause
      *
      * @param array $ids Array of IDs
+     *
      * @return string Comma-separated escaped IDs
      */
     protected function escapeIds(array $ids)
@@ -78,6 +78,7 @@ abstract class AbstractRepository
      * @param array $results Query results
      * @param string $key Key to index by
      * @param bool $multiple Allow multiple values per key (returns array of arrays)
+     *
      * @return array Indexed array
      */
     protected function indexBy(array $results, $key, $multiple = false)
@@ -110,6 +111,7 @@ abstract class AbstractRepository
      *
      * @param array $results Query results
      * @param string $key Key to group by
+     *
      * @return array Grouped array
      */
     protected function groupBy(array $results, $key)
@@ -122,12 +124,14 @@ abstract class AbstractRepository
      *
      * @param string $tableName Table name (without prefix)
      * @param string $columnName Column name
+     *
      * @return bool True if column exists
      */
     protected function columnExists($tableName, $columnName)
     {
         $sql = 'SHOW COLUMNS FROM `' . $this->getPrefix() . pSQL($tableName) . '` LIKE "' . pSQL($columnName) . '"';
         $result = $this->executeS($sql);
+
         return !empty($result);
     }
 }

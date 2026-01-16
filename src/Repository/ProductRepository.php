@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Repository for product data
  * Handles bulk loading of product information
- *
- * @package Dialog\AskDialog\Repository
  */
 class ProductRepository extends AbstractRepository
 {
@@ -36,6 +34,7 @@ class ProductRepository extends AbstractRepository
      * @param array $productIds Array of product IDs
      * @param int $idLang Language ID
      * @param int $idShop Shop ID
+     *
      * @return array Indexed by id_product
      */
     public function findByIdsWithLang(array $productIds, $idLang, $idShop)
@@ -56,11 +55,11 @@ class ProductRepository extends AbstractRepository
                 FROM ' . $this->getPrefix() . 'product p
                 INNER JOIN ' . $this->getPrefix() . 'product_lang pl 
                     ON p.id_product = pl.id_product 
-                    AND pl.id_lang = ' . (int)$idLang . '
-                    AND pl.id_shop = ' . (int)$idShop . '
+                    AND pl.id_lang = ' . (int) $idLang . '
+                    AND pl.id_shop = ' . (int) $idShop . '
                 INNER JOIN ' . $this->getPrefix() . 'product_shop ps 
                     ON p.id_product = ps.id_product 
-                    AND ps.id_shop = ' . (int)$idShop . '
+                    AND ps.id_shop = ' . (int) $idShop . '
                 WHERE p.id_product IN (' . $this->escapeIds($productIds) . ')';
 
         $results = $this->executeS($sql);
@@ -76,6 +75,7 @@ class ProductRepository extends AbstractRepository
      * Get all product IDs for a specific shop
      *
      * @param int $idShop Shop ID
+     *
      * @return array Array of product IDs
      */
     public function getProductIdsByShop($idShop)
@@ -84,7 +84,7 @@ class ProductRepository extends AbstractRepository
                 FROM ' . $this->getPrefix() . 'product p
                 INNER JOIN ' . $this->getPrefix() . 'product_shop ps 
                     ON p.id_product = ps.id_product
-                WHERE ps.id_shop = ' . (int)$idShop;
+                WHERE ps.id_shop = ' . (int) $idShop;
 
         $results = $this->executeS($sql);
 

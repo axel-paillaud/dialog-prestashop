@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Repository for product categories
  * Handles bulk loading of category data and product-category relations
- *
- * @package Dialog\AskDialog\Repository
  */
 class CategoryRepository extends AbstractRepository
 {
@@ -34,6 +32,7 @@ class CategoryRepository extends AbstractRepository
      * Bulk load product-category relations
      *
      * @param array $productIds Array of product IDs
+     *
      * @return array Grouped by id_product
      */
     public function findCategoryIdsByProductIds(array $productIds)
@@ -64,6 +63,7 @@ class CategoryRepository extends AbstractRepository
      * @param array $categoryIds Array of category IDs
      * @param int $idLang Language ID
      * @param int $idShop Shop ID
+     *
      * @return array Indexed by id_category
      */
     public function findByIds(array $categoryIds, $idLang, $idShop)
@@ -85,8 +85,8 @@ class CategoryRepository extends AbstractRepository
                 FROM ' . $this->getPrefix() . 'category c
                 INNER JOIN ' . $this->getPrefix() . 'category_lang cl 
                     ON c.id_category = cl.id_category 
-                    AND cl.id_lang = ' . (int)$idLang . '
-                    AND cl.id_shop = ' . (int)$idShop . '
+                    AND cl.id_lang = ' . (int) $idLang . '
+                    AND cl.id_shop = ' . (int) $idShop . '
                 WHERE c.id_category IN (' . $this->escapeIds($categoryIds) . ')
                     AND c.active = 1';
 
@@ -104,6 +104,7 @@ class CategoryRepository extends AbstractRepository
      *
      * @param int $idLang Language ID
      * @param int $idShop Shop ID
+     *
      * @return array Array of categories with all fields
      */
     public function findAllForExport($idLang, $idShop)
@@ -121,11 +122,11 @@ class CategoryRepository extends AbstractRepository
                 FROM ' . $this->getPrefix() . 'category c
                 INNER JOIN ' . $this->getPrefix() . 'category_lang cl 
                     ON c.id_category = cl.id_category 
-                    AND cl.id_lang = ' . (int)$idLang . '
-                    AND cl.id_shop = ' . (int)$idShop . '
+                    AND cl.id_lang = ' . (int) $idLang . '
+                    AND cl.id_shop = ' . (int) $idShop . '
                 INNER JOIN ' . $this->getPrefix() . 'category_shop cs
                     ON c.id_category = cs.id_category
-                    AND cs.id_shop = ' . (int)$idShop . '
+                    AND cs.id_shop = ' . (int) $idShop . '
                 WHERE c.active = 1
                 ORDER BY c.id_parent ASC, cs.position ASC';
 

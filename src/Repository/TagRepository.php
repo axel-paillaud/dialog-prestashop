@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Repository for product tags
  * Handles bulk loading of tag data
- *
- * @package Dialog\AskDialog\Repository
  */
 class TagRepository extends AbstractRepository
 {
@@ -35,6 +33,7 @@ class TagRepository extends AbstractRepository
      *
      * @param array $productIds Array of product IDs
      * @param int $idLang Language ID
+     *
      * @return array Grouped by id_product
      */
     public function findByProductIds(array $productIds, $idLang)
@@ -51,7 +50,7 @@ class TagRepository extends AbstractRepository
                     ON pt.id_tag = t.id_tag 
                     AND pt.id_lang = t.id_lang
                 WHERE pt.id_product IN (' . $this->escapeIds($productIds) . ')
-                    AND pt.id_lang = ' . (int)$idLang . '
+                    AND pt.id_lang = ' . (int) $idLang . '
                 ORDER BY pt.id_product, t.name';
 
         $results = $this->executeS($sql);

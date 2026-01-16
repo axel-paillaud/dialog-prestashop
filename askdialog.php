@@ -26,10 +26,9 @@ if (!defined('_PS_VERSION_')) {
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Dialog\AskDialog\Repository\AppearanceRepository;
-use Dialog\AskDialog\Service\AskDialogClient;
-use Dialog\AskDialog\Service\PostHogService;
 use Dialog\AskDialog\Helper\ContextHelper;
+use Dialog\AskDialog\Repository\AppearanceRepository;
+use Dialog\AskDialog\Service\PostHogService;
 
 class AskDialog extends Module
 {
@@ -52,14 +51,14 @@ class AskDialog extends Module
         $this->need_instance = 0;
         $this->ps_versions_compliancy = [
             'min' => '1.7.7',
-            'max' => '8.99.99'
+            'max' => '8.99.99',
         ];
         $this->bootstrap = true;
 
         parent::__construct();
 
         $this->displayName = $this->trans('Ask Dialog', [], 'Modules.Askdialog.Admin');
-        $this->description =  $this->trans('Module to provide the AskDialog assistant on your e-shop', [], 'Modules.Askdialog.Admin');
+        $this->description = $this->trans('Module to provide the AskDialog assistant on your e-shop', [], 'Modules.Askdialog.Admin');
     }
 
     protected function installDb(): bool
@@ -85,7 +84,7 @@ class AskDialog extends Module
             && $this->registerHook('displayProductAdditionalInfo')
             && $this->registerHook('actionFrontControllerInitBefore')
             && $this->registerHook('displayOrderConfirmation')
-            && \Configuration::updateValue('ASKDIALOG_API_URL', self::DIALOG_API_URL);
+            && Configuration::updateValue('ASKDIALOG_API_URL', self::DIALOG_API_URL);
     }
 
     public function uninstall()
@@ -99,7 +98,6 @@ class AskDialog extends Module
             && $this->uninstallDb();
     }
 
-
     public function hookActionFrontControllerInitBefore()
     {
         // header("Access-Control-Allow-Origin: *");
@@ -109,7 +107,6 @@ class AskDialog extends Module
         //     exit;
         // }
     }
-
 
     public function hookActionFrontControllerSetMedia()
     {
@@ -124,7 +121,7 @@ class AskDialog extends Module
         );
 
         // Register CSS files specific to product pages
-        if ($this->context->controller instanceof \ProductController) {
+        if ($this->context->controller instanceof ProductController) {
             $this->context->controller->registerStylesheet(
                 'module-askdialog-product-instant',
                 'modules/' . $this->name . '/views/css/product-page/instant.css',
@@ -152,13 +149,13 @@ class AskDialog extends Module
             'priority' => 200,
             'server' => 'remote',
             'version' => $this->version,
-            'attributes' => 'defer'
+            'attributes' => 'defer',
         ];
 
         // Shopify compatibility patch - MUST load before instant.js (product pages only)
         // This monkey-patches fetch/XMLHttpRequest to redirect Shopify API calls to PrestaShop endpoints
         // WARNING: If additional Shopify errors appear, abandon this approach and create native implementation
-        if ($this->context->controller instanceof \ProductController) {
+        if ($this->context->controller instanceof ProductController) {
             $this->context->controller->registerJavascript(
                 'module-askdialog-shopify-compat-patch',
                 'modules/' . $this->name . '/views/js/shopify-compat-patch.js',
@@ -177,7 +174,7 @@ class AskDialog extends Module
         );
 
         // Load specific JS for product pages
-        if ($this->context->controller instanceof \ProductController) {
+        if ($this->context->controller instanceof ProductController) {
             // instant.js - product pages only
             $this->context->controller->registerJavascript(
                 'module-askdialog-instant',
@@ -229,7 +226,7 @@ class AskDialog extends Module
     public function hookDisplayProductAdditionalInfo($params)
     {
         // Ensure the hook is only executed on product pages
-        if (!$this->context->controller instanceof \ProductController) {
+        if (!$this->context->controller instanceof ProductController) {
             return;
         }
 
@@ -260,7 +257,7 @@ class AskDialog extends Module
             'ask_anything_placeholder' => $ask_anything_placeholder,
             'enableProductQuestion' => Configuration::get('ASKDIALOG_ENABLE_PRODUCT_QUESTION'),
             'defaultDesign' => Configuration::get('ASKDIALOG_DEFAULT_DESIGN'),
-            'suggestions' => ['suggestion-0', 'suggestion-1']
+            'suggestions' => ['suggestion-0', 'suggestion-1'],
         ]);
 
         return $this->display(__FILE__, 'views/templates/hook/displayproduct.tpl');
@@ -270,8 +267,8 @@ class AskDialog extends Module
     {
         $customer = $this->context->customer;
         $customerId = $customer->isLogged() ? $customer->id : 'anonymous';
-        
-        $publicApiKey = \Configuration::get('ASKDIALOG_API_KEY_PUBLIC');
+
+        $publicApiKey = Configuration::get('ASKDIALOG_API_KEY_PUBLIC');
         $countryCode = $this->context->country->iso_code;
         $languageCode = $this->context->language->iso_code;
         $languageName = $this->context->language->name;
@@ -291,7 +288,7 @@ class AskDialog extends Module
             'appearance_settings' => $appearanceSettings,
             'index_dot_js_cdn_url' => self::DIALOG_SDK_CDN_URL,
         ]);
-        
+
         return $this->display(__FILE__, 'views/templates/hook/displayfooterafter.tpl');
     }
 
@@ -309,7 +306,7 @@ class AskDialog extends Module
             $route = $this->context->link->getAdminLink('AdminAskDialog', true);
         }
 
-        \Tools::redirectAdmin($route);
+        Tools::redirectAdmin($route);
     }
 
     /**
@@ -361,9 +358,9 @@ class AskDialog extends Module
                 $quantity,
                 $cart
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Log error but don't break cart functionality
-            \PrestaShopLogger::addLog(
+            PrestaShopLogger::addLog(
                 'PostHog trackAddToCart error: ' . $e->getMessage(),
                 3,
                 null,

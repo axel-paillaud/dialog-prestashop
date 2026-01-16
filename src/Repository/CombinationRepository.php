@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Repository for product combinations/variants
  * Handles bulk loading of combination data and attributes
- *
- * @package Dialog\AskDialog\Repository
  */
 class CombinationRepository extends AbstractRepository
 {
@@ -34,6 +32,7 @@ class CombinationRepository extends AbstractRepository
      * Bulk load combinations for multiple products
      *
      * @param array $productIds Array of product IDs
+     *
      * @return array Grouped by id_product
      */
     public function findByProductIds(array $productIds)
@@ -67,6 +66,7 @@ class CombinationRepository extends AbstractRepository
      *
      * @param array $combinationIds Array of combination IDs (id_product_attribute)
      * @param int $idLang Language ID
+     *
      * @return array Grouped by id_product_attribute
      */
     public function findAttributesByCombinationIds(array $combinationIds, $idLang)
@@ -85,12 +85,12 @@ class CombinationRepository extends AbstractRepository
                     ON pac.id_attribute = a.id_attribute
                 INNER JOIN ' . $this->getPrefix() . 'attribute_lang al 
                     ON a.id_attribute = al.id_attribute 
-                    AND al.id_lang = ' . (int)$idLang . '
+                    AND al.id_lang = ' . (int) $idLang . '
                 INNER JOIN ' . $this->getPrefix() . 'attribute_group ag 
                     ON a.id_attribute_group = ag.id_attribute_group
                 INNER JOIN ' . $this->getPrefix() . 'attribute_group_lang agl 
                     ON ag.id_attribute_group = agl.id_attribute_group 
-                    AND agl.id_lang = ' . (int)$idLang . '
+                    AND agl.id_lang = ' . (int) $idLang . '
                 WHERE pac.id_product_attribute IN (' . $this->escapeIds($combinationIds) . ')
                 ORDER BY pac.id_product_attribute, ag.position, a.position';
 
@@ -107,6 +107,7 @@ class CombinationRepository extends AbstractRepository
      * Get all combination IDs for multiple products
      *
      * @param array $productIds Array of product IDs
+     *
      * @return array Array of id_product_attribute values
      */
     public function getCombinationIdsByProductIds(array $productIds)

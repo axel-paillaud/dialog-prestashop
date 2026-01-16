@@ -35,6 +35,7 @@ trait JsonResponseTrait
      *
      * @param array $data Response data
      * @param int $statusCode HTTP status code (default: 200)
+     *
      * @return void
      */
     protected function sendJsonResponse($data, $statusCode = 200)
@@ -51,6 +52,7 @@ trait JsonResponseTrait
      *
      * @param array $data Response data
      * @param int $statusCode HTTP status code (default: 200)
+     *
      * @return void
      */
     protected function sendJsonResponseAsync($data, $statusCode = 200)
@@ -80,6 +82,7 @@ trait JsonResponseTrait
      *
      * @param array $headers Array of headers from getallheaders()
      * @param string $headerName Header name to search for
+     *
      * @return string|null Header value or null if not found
      */
     protected function getHeaderCaseInsensitive($headers, $headerName)
@@ -90,6 +93,7 @@ trait JsonResponseTrait
                 return $value;
             }
         }
+
         return null;
     }
 }

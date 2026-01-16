@@ -25,8 +25,6 @@ namespace Dialog\AskDialog\Repository;
 /**
  * Repository for language data
  * Handles retrieval of language information
- *
- * @package Dialog\AskDialog\Repository
  */
 class LanguageRepository extends AbstractRepository
 {
