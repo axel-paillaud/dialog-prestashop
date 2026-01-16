@@ -262,24 +262,20 @@ class ProductExportService
         $productItem['handle'] = $productData['link_rewrite'];
 
         // Handle product price with tax for the country
-        if ($countryCode !== null) {
-            $idCountry = \Country::getByIso($countryCode);
-            $addressObj = new \Address();
-            $addressObj->id_state = 0;
-            $addressObj->postcode = '';
-            $addressObj->id_manufacturer = 0;
-            $addressObj->id_customer = 0;
-            $addressObj->id = 0;
-            $addressObj->id_country = $idCountry;
+        $idCountry = \Country::getByIso($countryCode);
+        $addressObj = new \Address();
+        $addressObj->id_state = 0;
+        $addressObj->postcode = '';
+        $addressObj->id_manufacturer = 0;
+        $addressObj->id_customer = 0;
+        $addressObj->id = 0;
+        $addressObj->id_country = $idCountry;
 
-            $idTaxRulesGroup = \Product::getIdTaxRulesGroupByIdProduct($product_id);
-            $taxManager = \TaxManagerFactory::getManager($addressObj, $idTaxRulesGroup);
-            $taxCalculator = $taxManager->getTaxCalculator();
-            $priceWithoutTax = \Product::getPriceStatic($product_id, false, null, 6, null, false, true);
-            $productItem['price'] = round($taxCalculator->addTaxes($priceWithoutTax), 2);
-        } else {
-            $productItem['price'] = \Product::getPriceStatic($product_id, true, null, 2, null, false, true);
-        }
+        $idTaxRulesGroup = \Product::getIdTaxRulesGroupByIdProduct($product_id);
+        $taxManager = \TaxManagerFactory::getManager($addressObj, $idTaxRulesGroup);
+        $taxCalculator = $taxManager->getTaxCalculator();
+        $priceWithoutTax = \Product::getPriceStatic($product_id, false, null, 6, null, false, true);
+        $productItem['price'] = round($taxCalculator->addTaxes($priceWithoutTax), 2);
 
         // Use preloaded combinations data
         $productCombinations = isset($this->combinationsData[$product_id]) ? $this->combinationsData[$product_id] : [];
