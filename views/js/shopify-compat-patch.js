@@ -77,11 +77,7 @@
       // Get public API key from Dialog global variables
       const publicApiKey = window.DIALOG_VARIABLES?.apiKey;
       if (publicApiKey) {
-        // Ensure 'Token ' prefix (don't duplicate if already present)
-        const authToken = publicApiKey.startsWith("Token ")
-          ? publicApiKey
-          : `Token ${publicApiKey}`;
-        options.headers["Authorization"] = authToken;
+        options.headers["Authorization"] = publicApiKey;
       }
 
       resource =
@@ -125,11 +121,7 @@
     if (this._isRewrittenShopifyUrl && !this._authHeaderSet) {
       const publicApiKey = window.DIALOG_VARIABLES?.apiKey;
       if (publicApiKey) {
-        // Ensure 'Token ' prefix (don't duplicate if already present)
-        const authToken = publicApiKey.startsWith("Token ")
-          ? publicApiKey
-          : `Token ${publicApiKey}`;
-        originalXHRSetRequestHeader.call(this, "Authorization", authToken);
+        originalXHRSetRequestHeader.call(this, "Authorization", publicApiKey);
         this._authHeaderSet = true;
       }
     }
