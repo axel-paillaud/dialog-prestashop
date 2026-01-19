@@ -128,12 +128,16 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
      */
     private function handleCatalogExport($dataGenerator)
     {
+        PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: START', 1);
+
         // Send immediate async response to Dialog API (HTTP 202 Accepted)
         // Response sent immediately, then processing continues in background
         $this->sendJsonResponseAsync([
             'status' => 'accepted',
             'message' => 'Export started',
         ], 202);
+
+        PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Async response 202 sent to client', 1);
 
         $exportLogRepo = new ExportLogRepository();
         $exportLogId = null;
@@ -144,6 +148,8 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
             $idLang = (int) $this->context->language->id;
             $countryCode = $this->context->country->iso_code;
 
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Context - idShop=' . $idShop . ', idLang=' . $idLang . ', countryCode=' . $countryCode, 1);
+
             // Create export log with 'init' status
             $exportLogId = $exportLogRepo->createLog(
                 $idShop,
@@ -153,28 +159,27 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
                     'country_code' => $countryCode,
                 ]
             );
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Export log created, ID=' . $exportLogId, 1);
 
             // Update status to 'pending' - starting generation
             $exportLogRepo->updateStatus($exportLogId, ExportLogRepository::STATUS_PENDING);
 
             // Generate catalog data merged with categories (Service handles everything)
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Generating catalog data...', 1);
             $catalogFile = $dataGenerator->generateCatalogData($idShop, $idLang, $countryCode);
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Catalog file generated: ' . $catalogFile, 1);
 
             // Generate CMS pages export (Service handles everything)
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Generating CMS data...', 1);
             $cmsFile = $dataGenerator->generateCMSData($idLang);
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: CMS file generated: ' . $cmsFile, 1);
 
             // Upload files to S3 (this will update log on success)
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Starting S3 upload...', 1);
             $this->uploadToS3($catalogFile, $cmsFile, $exportLogId, $exportLogRepo);
 
             // Log success
-            PrestaShopLogger::addLog(
-                'AskDialog catalog export completed successfully',
-                1, // Info level
-                null,
-                'AskDialog',
-                null,
-                true
-            );
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: SUCCESS - Export completed', 1);
         } catch (Exception $e) {
             // Update export log with error status
             if ($exportLogId) {
@@ -186,14 +191,7 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
             }
 
             // Log error since client already received 202 response
-            PrestaShopLogger::addLog(
-                'AskDialog catalog export failed: ' . $e->getMessage(),
-                3, // Error level
-                null,
-                'AskDialog',
-                null,
-                true
-            );
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: ERROR - ' . $e->getMessage(), 3);
         }
     }
 
@@ -209,21 +207,29 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
      */
     private function uploadToS3($catalogFile, $cmsFile, $exportLogId, $exportLogRepo)
     {
+        PrestaShopLogger::addLog('[AskDialog] S3Upload: START', 1);
+
         // Get signed URLs from Dialog API
+        PrestaShopLogger::addLog('[AskDialog] S3Upload: Requesting signed URLs from Dialog API...', 1);
         $askDialogClient = new AskDialogClient();
         $result = $askDialogClient->prepareServerTransfer();
 
         if ($result['statusCode'] !== 200) {
+            PrestaShopLogger::addLog('[AskDialog] S3Upload: ERROR - Failed to get signed URLs, statusCode=' . $result['statusCode'], 3);
             throw new Exception('Failed to get S3 upload URLs: ' . $result['body']);
         }
 
+        PrestaShopLogger::addLog('[AskDialog] S3Upload: Signed URLs received successfully', 1);
+
         $uploadUrls = json_decode($result['body'], true);
         if ($uploadUrls === null) {
+            PrestaShopLogger::addLog('[AskDialog] S3Upload: ERROR - Invalid JSON response from prepareServerTransfer', 3);
             throw new Exception('Invalid response from prepareServerTransfer');
         }
 
         // Extract upload URLs (validate presence)
         if (!isset($uploadUrls['catalogUploadUrl']) || !isset($uploadUrls['pageUploadUrl'])) {
+            PrestaShopLogger::addLog('[AskDialog] S3Upload: ERROR - Missing upload URLs in API response', 3);
             throw new Exception('Dialog API missing required upload URLs. Expected: catalogUploadUrl, pageUploadUrl');
         }
 
@@ -235,20 +241,29 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
             $urlCatalog = $bodyCatalog['url'];
             $fieldsCatalog = $bodyCatalog['fields'];
             $catalogFilename = basename($catalogFile);
+            $catalogSize = round(filesize($catalogFile) / 1024 / 1024, 2);
+            PrestaShopLogger::addLog('[AskDialog] S3Upload: Uploading catalog (' . $catalogSize . 'MB) to S3...', 1);
             $responseCatalog = $this->sendFileToS3($urlCatalog, $fieldsCatalog, $catalogFile, $catalogFilename);
+            PrestaShopLogger::addLog('[AskDialog] S3Upload: Catalog upload response: HTTP ' . $responseCatalog->getStatusCode(), 1);
 
             // Send CMS pages to S3
             $urlPages = $bodyPages['url'];
             $fieldsPages = $bodyPages['fields'];
             $cmsFilename = basename($cmsFile);
+            $cmsSize = round(filesize($cmsFile) / 1024, 2);
+            PrestaShopLogger::addLog('[AskDialog] S3Upload: Uploading CMS pages (' . $cmsSize . 'KB) to S3...', 1);
             $responsePages = $this->sendFileToS3($urlPages, $fieldsPages, $cmsFile, $cmsFilename);
+            PrestaShopLogger::addLog('[AskDialog] S3Upload: CMS upload response: HTTP ' . $responsePages->getStatusCode(), 1);
 
             // Check all uploads succeeded
             if ($responseCatalog->getStatusCode() === 204
                 && $responsePages->getStatusCode() === 204) {
+                PrestaShopLogger::addLog('[AskDialog] S3Upload: Both uploads successful (HTTP 204)', 1);
+
                 // Move files to sent folder
                 rename($catalogFile, PathHelper::getSentDir() . $catalogFilename);
                 rename($cmsFile, PathHelper::getSentDir() . $cmsFilename);
+                PrestaShopLogger::addLog('[AskDialog] S3Upload: Files moved to sent/ folder', 1);
 
                 // Update export log with success status
                 $exportLogRepo->updateStatus(
@@ -263,13 +278,19 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
                 // Clean up old files after successful export
                 PathHelper::cleanTmpFiles(86400);
                 PathHelper::cleanSentFilesKeepRecent(20);
+                PrestaShopLogger::addLog('[AskDialog] S3Upload: Cleanup completed', 1);
             } else {
+                PrestaShopLogger::addLog('[AskDialog] S3Upload: ERROR - Unexpected status codes: catalog=' . $responseCatalog->getStatusCode() . ', cms=' . $responsePages->getStatusCode(), 3);
                 throw new Exception('S3 upload failed - unexpected status code');
             }
         } catch (HttpExceptionInterface $e) {
+            PrestaShopLogger::addLog('[AskDialog] S3Upload: ERROR - HTTP exception: ' . $e->getMessage(), 3);
             throw new Exception('HTTP error during S3 upload: ' . $e->getMessage());
         } catch (TransportExceptionInterface $e) {
+            PrestaShopLogger::addLog('[AskDialog] S3Upload: ERROR - Transport exception: ' . $e->getMessage(), 3);
             throw new Exception('Network error during S3 upload: ' . $e->getMessage());
         }
+
+        PrestaShopLogger::addLog('[AskDialog] S3Upload: SUCCESS', 1);
     }
 }
