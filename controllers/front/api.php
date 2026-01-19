@@ -128,7 +128,11 @@ class AskDialogApiModuleFrontController extends ModuleFrontController
      */
     private function handleGetProductData($dataGenerator)
     {
+        // Accept both "id_product" (PrestaShop convention) and "id" (Dialog SDK)
         $productId = (int) Tools::getValue('id_product');
+        if ($productId === 0) {
+            $productId = (int) Tools::getValue('id');
+        }
 
         // Use context language and country by default
         $idLang = (int) $this->context->language->id;
