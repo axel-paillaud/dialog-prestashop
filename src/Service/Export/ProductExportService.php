@@ -26,6 +26,7 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
+use Dialog\AskDialog\Form\GeneralDataConfiguration;
 use Dialog\AskDialog\Helper\PathHelper;
 use Dialog\AskDialog\Repository\CategoryRepository;
 use Dialog\AskDialog\Repository\CombinationRepository;
@@ -62,11 +63,6 @@ class ProductExportService
     private $categoriesData = [];
     private $productTagsData = [];
     private $productFeaturesData = [];
-
-    /**
-     * Default batch size for batched export
-     */
-    private const DEFAULT_BATCH_SIZE = 5000;
 
     public function __construct()
     {
@@ -126,7 +122,7 @@ class ProductExportService
      * @param int $idShop Shop ID
      * @param int $idLang Language ID
      * @param string $countryCode Country code for tax calculation
-     * @param int $batchSize Number of products per batch
+     * @param int $batchSize Number of products per batch (default: from configuration)
      * @param callable|null $progressCallback Callback called after each batch: function(int $batchCompleted, int $totalBatches)
      *
      * @return string Path to generated JSON file
@@ -135,7 +131,10 @@ class ProductExportService
      */
     public function generateFileBatched($idShop, $idLang, $countryCode = 'fr', $batchSize = null, $progressCallback = null)
     {
-        $batchSize = $batchSize ?? self::DEFAULT_BATCH_SIZE;
+        if ($batchSize === null) {
+            $configBatchSize = \Configuration::get(GeneralDataConfiguration::ASKDIALOG_BATCH_SIZE);
+            $batchSize = $configBatchSize !== false ? (int) $configBatchSize : GeneralDataConfiguration::DEFAULT_BATCH_SIZE;
+        }
         $startTime = microtime(true);
         \PrestaShopLogger::addLog('[AskDialog] ProductExport::generateFileBatched: START (batchSize=' . $batchSize . ')', 1);
 
