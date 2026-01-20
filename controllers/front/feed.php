@@ -65,18 +65,55 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
         parent::initContent();
 
         // Check if token is valid
-        $headers = getallheaders();
-        $authHeader = $this->getHeaderCaseInsensitive($headers, 'Authorization');
+        $token = $this->getApiToken();
 
-        if ($authHeader === null || substr($authHeader, 0, 6) !== 'Token ') {
+        if ($token === null) {
             $this->sendJsonResponse(['error' => 'Private API Token is missing'], 401);
         }
 
-        if ($authHeader !== 'Token ' . Configuration::get('ASKDIALOG_API_KEY')) {
+        if ($token !== \Configuration::get('ASKDIALOG_API_KEY')) {
             $this->sendJsonResponse(['error' => 'Private API Token is wrong'], 403);
         }
 
         $this->ajax = true;
+    }
+
+    /**
+     * Get API token from various sources
+     * Some hosting providers (OVH, FastCGI) strip the Authorization header
+     *
+     * @return string|null Token value (without "Token " prefix)
+     */
+    private function getApiToken()
+    {
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+
+        // 1. Standard Authorization header: "Token xxx"
+        $authHeader = $this->getHeaderCaseInsensitive($headers, 'Authorization');
+        if ($authHeader !== null && substr($authHeader, 0, 6) === 'Token ') {
+            return substr($authHeader, 6);
+        }
+
+        // 2. X-Api-Key header (bypass for hosts that strip Authorization)
+        $xApiKey = $this->getHeaderCaseInsensitive($headers, 'X-Api-Key');
+        if ($xApiKey !== null) {
+            return $xApiKey;
+        }
+
+        // 3. $_SERVER variants (FastCGI, CGI, after rewrites)
+        if (!empty($_SERVER['HTTP_AUTHORIZATION']) && substr($_SERVER['HTTP_AUTHORIZATION'], 0, 6) === 'Token ') {
+            return substr($_SERVER['HTTP_AUTHORIZATION'], 6);
+        }
+
+        if (!empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) && substr($_SERVER['REDIRECT_HTTP_AUTHORIZATION'], 0, 6) === 'Token ') {
+            return substr($_SERVER['REDIRECT_HTTP_AUTHORIZATION'], 6);
+        }
+
+        if (!empty($_SERVER['HTTP_X_API_KEY'])) {
+            return $_SERVER['HTTP_X_API_KEY'];
+        }
+
+        return null;
     }
 
     /**
@@ -273,7 +310,6 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
 
             $this->sendJsonResponse([
                 'status' => 'in_progress',
-                'stepDone' => false,
                 'progress' => $progress,
                 'productsExported' => $newProductsExported,
                 'totalProducts' => $result['totalProducts'],
@@ -331,7 +367,6 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
 
             $this->sendJsonResponse([
                 'status' => 'success',
-                'stepDone' => true,
                 'progress' => 100,
                 'message' => 'Export completed and uploaded to S3',
             ], 200);
@@ -348,7 +383,6 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
 
             $this->sendJsonResponse([
                 'status' => 'error',
-                'stepDone' => true,
                 'message' => $e->getMessage(),
             ], 500);
         }
