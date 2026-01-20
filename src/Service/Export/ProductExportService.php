@@ -597,4 +597,181 @@ class ProductExportService
 
         return $productItem;
     }
+
+    /**
+     * Get all product IDs for a shop
+     *
+     * @param int $idShop Shop ID
+     *
+     * @return array Array of product IDs
+     */
+    public function getProductIds($idShop)
+    {
+        return $this->productRepository->getProductIdsByShop($idShop);
+    }
+
+    /**
+     * Process products in a resumable way with time limit protection
+     * Uses NDJSON (newline-delimited JSON) as intermediate format for safe appending
+     *
+     * @param int $idShop Shop ID
+     * @param int $idLang Language ID
+     * @param string $countryCode Country code for tax calculation
+     * @param int $offset Number of products already exported (resume point)
+     * @param int $batchSize Number of products per batch
+     * @param int $timeLimit Max seconds to run (should be max_execution_time - safety margin)
+     * @param string|null $tmpFilePath Existing NDJSON temp file to append to, or null to create new
+     *
+     * @return array{
+     *     productsProcessed: int,
+     *     isComplete: bool,
+     *     tmpFilePath: string,
+     *     totalProducts: int
+     * }
+     *
+     * @throws \Exception If file operations fail
+     */
+    public function processResumableBatch($idShop, $idLang, $countryCode, $offset, $batchSize, $timeLimit, $tmpFilePath = null)
+    {
+        $startTime = time();
+        \PrestaShopLogger::addLog('[AskDialog] ProductExport::processResumableBatch: START offset=' . $offset . ', batchSize=' . $batchSize . ', timeLimit=' . $timeLimit . 's', 1);
+
+        // Get all product IDs
+        $productIds = $this->productRepository->getProductIdsByShop($idShop);
+        $totalProducts = count($productIds);
+
+        if (empty($productIds)) {
+            \PrestaShopLogger::addLog('[AskDialog] ProductExport::processResumableBatch: No products found', 3);
+            throw new \Exception('No products found for shop ID ' . $idShop);
+        }
+
+        // Check if already complete
+        if ($offset >= $totalProducts) {
+            \PrestaShopLogger::addLog('[AskDialog] ProductExport::processResumableBatch: Already complete (offset >= total)', 1);
+
+            return [
+                'productsProcessed' => 0,
+                'isComplete' => true,
+                'tmpFilePath' => $tmpFilePath,
+                'totalProducts' => $totalProducts,
+            ];
+        }
+
+        // Create new file if needed (NDJSON format: .ndjson extension)
+        if ($tmpFilePath === null) {
+            $tmpFilePath = PathHelper::generateTmpFilePath('catalog', 'ndjson');
+        }
+
+        // Get products to process (from offset)
+        $remainingProductIds = array_slice($productIds, $offset);
+        $batches = array_chunk($remainingProductIds, $batchSize);
+
+        $processedCount = 0;
+        $linkObj = new \Link();
+
+        foreach ($batches as $batchProductIds) {
+            // Check time limit before processing batch
+            $elapsed = time() - $startTime;
+            if ($elapsed >= $timeLimit) {
+                \PrestaShopLogger::addLog('[AskDialog] ProductExport::processResumableBatch: Time limit reached after ' . $elapsed . 's', 1);
+                break;
+            }
+
+            // Load and process batch
+            $this->bulkLoadData($batchProductIds, $idLang, $idShop);
+
+            // Build NDJSON content for this batch
+            $ndjsonLines = '';
+            foreach ($batchProductIds as $productId) {
+                $productData = $this->getProductData($productId, $idLang, $linkObj, $countryCode);
+                if (!empty($productData)) {
+                    $ndjsonLines .= json_encode($productData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+                    $processedCount++;
+                }
+            }
+
+            // Append to file (atomic write for this batch)
+            if (!empty($ndjsonLines)) {
+                file_put_contents($tmpFilePath, $ndjsonLines, FILE_APPEND | LOCK_EX);
+            }
+
+            // Free memory
+            $this->clearLoadedData();
+
+            \PrestaShopLogger::addLog('[AskDialog] ProductExport::processResumableBatch: Batch done, processed=' . $processedCount . ', elapsed=' . (time() - $startTime) . 's', 1);
+        }
+
+        // Check if complete
+        $newOffset = $offset + $processedCount;
+        $isComplete = ($newOffset >= $totalProducts);
+
+        \PrestaShopLogger::addLog('[AskDialog] ProductExport::processResumableBatch: END processed=' . $processedCount . ', newOffset=' . $newOffset . '/' . $totalProducts . ', isComplete=' . ($isComplete ? 'true' : 'false'), 1);
+
+        return [
+            'productsProcessed' => $processedCount,
+            'isComplete' => $isComplete,
+            'tmpFilePath' => $tmpFilePath,
+            'totalProducts' => $totalProducts,
+        ];
+    }
+
+    /**
+     * Convert NDJSON file to final JSON array file
+     * Called once export is complete
+     *
+     * @param string $ndjsonFilePath Path to NDJSON file
+     *
+     * @return string Path to final JSON file
+     *
+     * @throws \Exception If conversion fails
+     */
+    public function convertNdjsonToJson($ndjsonFilePath)
+    {
+        \PrestaShopLogger::addLog('[AskDialog] ProductExport::convertNdjsonToJson: START', 1);
+
+        if (!file_exists($ndjsonFilePath)) {
+            throw new \Exception('NDJSON file not found: ' . $ndjsonFilePath);
+        }
+
+        // Read NDJSON file line by line
+        $products = [];
+        $handle = fopen($ndjsonFilePath, 'r');
+        if ($handle === false) {
+            throw new \Exception('Failed to open NDJSON file');
+        }
+
+        while (($line = fgets($handle)) !== false) {
+            $line = trim($line);
+            if (!empty($line)) {
+                $product = json_decode($line, true);
+                if ($product !== null) {
+                    $products[] = $product;
+                }
+            }
+        }
+        fclose($handle);
+
+        \PrestaShopLogger::addLog('[AskDialog] ProductExport::convertNdjsonToJson: Read ' . count($products) . ' products', 1);
+
+        // Generate final JSON file
+        $finalFilePath = PathHelper::generateTmpFilePath('catalog', 'json');
+        $jsonContent = json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        if ($jsonContent === false) {
+            throw new \Exception('JSON encoding failed: ' . json_last_error_msg());
+        }
+
+        $bytesWritten = file_put_contents($finalFilePath, $jsonContent);
+        if ($bytesWritten === false) {
+            throw new \Exception('Failed to write final JSON file');
+        }
+
+        // Delete NDJSON temp file
+        unlink($ndjsonFilePath);
+
+        $fileSizeMb = round($bytesWritten / 1024 / 1024, 2);
+        \PrestaShopLogger::addLog('[AskDialog] ProductExport::convertNdjsonToJson: SUCCESS - ' . $fileSizeMb . 'MB', 1);
+
+        return $finalFilePath;
+    }
 }
