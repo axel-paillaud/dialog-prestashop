@@ -87,7 +87,6 @@ class AskDialog extends Module
             && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('displayFooterAfter')
             && $this->registerHook('displayProductAdditionalInfo')
-            && $this->registerHook('actionFrontControllerInitBefore')
             && $this->registerHook('displayOrderConfirmation')
             && Configuration::updateValue('ASKDIALOG_API_URL', self::DIALOG_API_URL)
             && Configuration::updateValue('ASKDIALOG_BATCH_SIZE', 5000)
@@ -97,23 +96,12 @@ class AskDialog extends Module
     public function uninstall()
     {
         return parent::uninstall()
-            // Commented for development comfort - uncomment in production to clean all configuration
-            // && \Configuration::deleteByName('ASKDIALOG_API_URL')
-            // && \Configuration::deleteByName('ASKDIALOG_API_KEY')
-            // && \Configuration::deleteByName('ASKDIALOG_API_KEY_PUBLIC')
-            // && \Configuration::deleteByName('ASKDIALOG_ENABLE_PRODUCT_HOOK')
-            // && \Configuration::deleteByName('ASKDIALOG_ENABLE_LOGS')
+            && \Configuration::deleteByName('ASKDIALOG_API_URL')
+            && \Configuration::deleteByName('ASKDIALOG_API_KEY')
+            && \Configuration::deleteByName('ASKDIALOG_API_KEY_PUBLIC')
+            && \Configuration::deleteByName('ASKDIALOG_ENABLE_PRODUCT_HOOK')
+            && \Configuration::deleteByName('ASKDIALOG_ENABLE_LOGS')
             && $this->uninstallDb();
-    }
-
-    public function hookActionFrontControllerInitBefore()
-    {
-        // header("Access-Control-Allow-Origin: *");
-        // header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-        // header("Access-Control-Allow-Headers: Content-Type, Authorization");
-        // if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        //     exit;
-        // }
     }
 
     public function hookActionFrontControllerSetMedia()
