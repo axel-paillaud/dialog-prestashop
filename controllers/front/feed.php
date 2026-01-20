@@ -23,6 +23,7 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
+use Dialog\AskDialog\Form\GeneralDataConfiguration;
 use Dialog\AskDialog\Helper\PathHelper;
 use Dialog\AskDialog\Repository\ExportLogRepository;
 use Dialog\AskDialog\Service\AskDialogClient;
@@ -42,11 +43,6 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 class AskDialogFeedModuleFrontController extends ModuleFrontController
 {
     use JsonResponseTrait;
-
-    /**
-     * Batch size for product export (5000 products per batch)
-     */
-    private const BATCH_SIZE = 5000;
 
     /**
      * Initialize controller and verify API key authentication
@@ -154,11 +150,15 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
             $idLang = (int) $this->context->language->id;
             $countryCode = $this->context->country->iso_code;
 
-            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Context - idShop=' . $idShop . ', idLang=' . $idLang . ', countryCode=' . $countryCode, 1);
+            // Get batch size from configuration
+            $configBatchSize = Configuration::get(GeneralDataConfiguration::ASKDIALOG_BATCH_SIZE);
+            $batchSize = $configBatchSize !== false ? (int) $configBatchSize : GeneralDataConfiguration::DEFAULT_BATCH_SIZE;
+
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Context - idShop=' . $idShop . ', idLang=' . $idLang . ', countryCode=' . $countryCode . ', batchSize=' . $batchSize, 1);
 
             // Get product count for batch calculation
             $totalProducts = $dataGenerator->getProductCount($idShop);
-            $totalBatches = (int) ceil($totalProducts / self::BATCH_SIZE);
+            $totalBatches = (int) ceil($totalProducts / $batchSize);
             PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: ' . $totalProducts . ' products, ' . $totalBatches . ' batches', 1);
 
             // Create export log with 'init' status and batch info
@@ -168,7 +168,7 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
                 [
                     'id_lang' => $idLang,
                     'country_code' => $countryCode,
-                    'batch_size' => self::BATCH_SIZE,
+                    'batch_size' => $batchSize,
                     'total_products' => $totalProducts,
                     'total_batches' => $totalBatches,
                     'batches_completed' => 0,
@@ -191,7 +191,7 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
 
             // Generate catalog data with batch processing
             PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Generating catalog data (batched)...', 1);
-            $catalogFile = $dataGenerator->generateCatalogDataBatched($idShop, $idLang, $countryCode, self::BATCH_SIZE, $progressCallback);
+            $catalogFile = $dataGenerator->generateCatalogDataBatched($idShop, $idLang, $countryCode, $batchSize, $progressCallback);
             PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Catalog file generated: ' . $catalogFile, 1);
 
             // Generate CMS pages export (Service handles everything)
