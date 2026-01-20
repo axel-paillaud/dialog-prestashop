@@ -26,6 +26,7 @@ if (!defined('_PS_VERSION_')) {
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Dialog\AskDialog\Helper\ContextHelper;
+use Dialog\AskDialog\Helper\Logger;
 use Dialog\AskDialog\Repository\AppearanceRepository;
 use Dialog\AskDialog\Service\PostHogService;
 
@@ -364,11 +365,9 @@ class AskDialog extends Module
             );
         } catch (Exception $e) {
             // Log error but don't break cart functionality
-            PrestaShopLogger::addLog(
-                'PostHog trackAddToCart error: ' . $e->getMessage(),
-                3,
-                null,
-                'AskDialog'
+            Logger::log(
+                '[AskDialog] PostHog trackAddToCart error: ' . $e->getMessage(),
+                3
             );
         }
     }
