@@ -23,6 +23,7 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
+use Dialog\AskDialog\Form\GeneralDataConfiguration;
 use Dialog\AskDialog\Helper\PathHelper;
 use Dialog\AskDialog\Repository\ExportLogRepository;
 use Dialog\AskDialog\Service\AskDialogClient;
@@ -123,6 +124,7 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
 
     /**
      * Handles catalog export: generate data, upload to S3
+     * Uses batch processing for memory efficiency on large catalogs
      *
      * @param DataGenerator $dataGenerator
      */
@@ -148,15 +150,29 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
             $idLang = (int) $this->context->language->id;
             $countryCode = $this->context->country->iso_code;
 
-            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Context - idShop=' . $idShop . ', idLang=' . $idLang . ', countryCode=' . $countryCode, 1);
+            // Get batch size from configuration
+            $configBatchSize = Configuration::get(GeneralDataConfiguration::ASKDIALOG_BATCH_SIZE);
+            $batchSize = $configBatchSize !== false ? (int) $configBatchSize : GeneralDataConfiguration::DEFAULT_BATCH_SIZE;
 
-            // Create export log with 'init' status
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Context - idShop=' . $idShop . ', idLang=' . $idLang . ', countryCode=' . $countryCode . ', batchSize=' . $batchSize, 1);
+
+            // Get product count for batch calculation
+            $totalProducts = $dataGenerator->getProductCount($idShop);
+            $totalBatches = (int) ceil($totalProducts / $batchSize);
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: ' . $totalProducts . ' products, ' . $totalBatches . ' batches', 1);
+
+            // Create export log with 'init' status and batch info
             $exportLogId = $exportLogRepo->createLog(
                 $idShop,
                 ExportLogRepository::EXPORT_TYPE_CATALOG,
                 [
                     'id_lang' => $idLang,
                     'country_code' => $countryCode,
+                    'batch_size' => $batchSize,
+                    'total_products' => $totalProducts,
+                    'total_batches' => $totalBatches,
+                    'batches_completed' => 0,
+                    'current_batch' => 0,
                 ]
             );
             PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Export log created, ID=' . $exportLogId, 1);
@@ -164,9 +180,18 @@ class AskDialogFeedModuleFrontController extends ModuleFrontController
             // Update status to 'pending' - starting generation
             $exportLogRepo->updateStatus($exportLogId, ExportLogRepository::STATUS_PENDING);
 
-            // Generate catalog data merged with categories (Service handles everything)
-            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Generating catalog data...', 1);
-            $catalogFile = $dataGenerator->generateCatalogData($idShop, $idLang, $countryCode);
+            // Progress callback to update metadata after each batch
+            $progressCallback = function ($batchCompleted, $totalBatches) use ($exportLogRepo, $exportLogId) {
+                $exportLogRepo->updateMetadata($exportLogId, [
+                    'batches_completed' => $batchCompleted,
+                    'current_batch' => $batchCompleted,
+                ]);
+                PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Progress ' . $batchCompleted . '/' . $totalBatches, 1);
+            };
+
+            // Generate catalog data with batch processing
+            PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Generating catalog data (batched)...', 1);
+            $catalogFile = $dataGenerator->generateCatalogDataBatched($idShop, $idLang, $countryCode, $batchSize, $progressCallback);
             PrestaShopLogger::addLog('[AskDialog] Feed::handleCatalogExport: Catalog file generated: ' . $catalogFile, 1);
 
             // Generate CMS pages export (Service handles everything)

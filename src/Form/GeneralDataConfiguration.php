@@ -40,6 +40,11 @@ final class GeneralDataConfiguration implements DataConfigurationInterface
     public const ASKDIALOG_API_KEY_PUBLIC = 'ASKDIALOG_API_KEY_PUBLIC';
     public const ASKDIALOG_API_KEY = 'ASKDIALOG_API_KEY';
     public const ASKDIALOG_ENABLE_PRODUCT_HOOK = 'ASKDIALOG_ENABLE_PRODUCT_HOOK';
+    public const ASKDIALOG_BATCH_SIZE = 'ASKDIALOG_BATCH_SIZE';
+
+    public const DEFAULT_BATCH_SIZE = 5000;
+    private const BATCH_SIZE_MIN = 100;
+    private const BATCH_SIZE_MAX = 50000;
 
     private const API_KEY_MIN_LENGTH = 10;
     private const API_KEY_MAX_LENGTH = 255;
@@ -56,10 +61,13 @@ final class GeneralDataConfiguration implements DataConfigurationInterface
 
     public function getConfiguration(): array
     {
+        $batchSize = $this->configuration->get(static::ASKDIALOG_BATCH_SIZE);
+
         return [
             'api_key_public' => (string) $this->configuration->get(static::ASKDIALOG_API_KEY_PUBLIC),
             'api_key' => (string) $this->configuration->get(static::ASKDIALOG_API_KEY),
             'enable_product_hook' => (bool) $this->configuration->get(static::ASKDIALOG_ENABLE_PRODUCT_HOOK),
+            'batch_size' => $batchSize !== false ? (int) $batchSize : self::DEFAULT_BATCH_SIZE,
         ];
     }
 
@@ -70,6 +78,7 @@ final class GeneralDataConfiguration implements DataConfigurationInterface
             'api_key_public' => isset($configuration['api_key_public']) ? trim((string) $configuration['api_key_public']) : '',
             'api_key' => isset($configuration['api_key']) ? trim((string) $configuration['api_key']) : '',
             'enable_product_hook' => isset($configuration['enable_product_hook']) ? (bool) $configuration['enable_product_hook'] : false,
+            'batch_size' => isset($configuration['batch_size']) ? (int) $configuration['batch_size'] : self::DEFAULT_BATCH_SIZE,
         ];
 
         // Validate
@@ -81,6 +90,7 @@ final class GeneralDataConfiguration implements DataConfigurationInterface
         $this->configuration->set(static::ASKDIALOG_API_KEY_PUBLIC, $normalized['api_key_public']);
         $this->configuration->set(static::ASKDIALOG_API_KEY, $normalized['api_key']);
         $this->configuration->set(static::ASKDIALOG_ENABLE_PRODUCT_HOOK, $normalized['enable_product_hook']);
+        $this->configuration->set(static::ASKDIALOG_BATCH_SIZE, $normalized['batch_size']);
 
         // Register domain with Dialog API after saving API keys
         try {
@@ -121,6 +131,14 @@ final class GeneralDataConfiguration implements DataConfigurationInterface
         // Validate private API key
         if ($apiKey === '' || \strlen($apiKey) < self::API_KEY_MIN_LENGTH || \strlen($apiKey) > self::API_KEY_MAX_LENGTH) {
             return false;
+        }
+
+        // Validate batch size (optional, use default if not set)
+        if (isset($configuration['batch_size'])) {
+            $batchSize = (int) $configuration['batch_size'];
+            if ($batchSize < self::BATCH_SIZE_MIN || $batchSize > self::BATCH_SIZE_MAX) {
+                return false;
+            }
         }
 
         return true;
