@@ -45,7 +45,7 @@ class AskDialog extends Module
     {
         $this->name = 'askdialog';
         $this->tab = 'front_office_features';
-        $this->version = '1.0.0';
+        $this->version = '1.0.1';
         $this->author = 'AskDialog';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = [
@@ -88,7 +88,8 @@ class AskDialog extends Module
             && $this->registerHook('displayProductAdditionalInfo')
             && $this->registerHook('actionFrontControllerInitBefore')
             && $this->registerHook('displayOrderConfirmation')
-            && Configuration::updateValue('ASKDIALOG_API_URL', self::DIALOG_API_URL);
+            && Configuration::updateValue('ASKDIALOG_API_URL', self::DIALOG_API_URL)
+            && Configuration::updateValue('ASKDIALOG_BATCH_SIZE', 5000);
     }
 
     public function uninstall()
