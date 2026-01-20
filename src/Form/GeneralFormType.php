@@ -30,6 +30,7 @@ if (!defined('_PS_VERSION_')) {
 
 use PrestaShopBundle\Form\Admin\Type\SwitchType;
 use PrestaShopBundle\Form\Admin\Type\TranslatorAwareType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -81,6 +82,23 @@ class GeneralFormType extends TranslatorAwareType
                 'label' => $this->trans('Enable on Product Page', 'Modules.Askdialog.Admin'),
                 'help' => $this->trans('Enable or disable the AskDialog assistant on the product page', 'Modules.Askdialog.Admin'),
                 'required' => false,
+            ])
+            ->add('batch_size', IntegerType::class, [
+                'label' => $this->trans('Export Batch Size', 'Modules.Askdialog.Admin'),
+                'help' => $this->trans('Number of products to process per batch during catalog export. Lower values reduce memory usage and timeout risk on large catalogs. Default: 5000', 'Modules.Askdialog.Admin'),
+                'required' => false,
+                'constraints' => [
+                    new Assert\Range([
+                        'min' => 100,
+                        'max' => 50000,
+                        'notInRangeMessage' => $this->trans('Batch size must be between {{ min }} and {{ max }}', 'Modules.Askdialog.Admin'),
+                    ]),
+                ],
+                'attr' => [
+                    'min' => 100,
+                    'max' => 50000,
+                    'step' => 100,
+                ],
             ]);
     }
 }
