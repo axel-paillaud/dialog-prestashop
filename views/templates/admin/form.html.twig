@@ -28,9 +28,13 @@
   {{ parent() }}
   <script>
     $(document).ready(function() {
-      $('.colorpicker input[type="text"]').each(function() {
-        $(this).colorpicker();
-      });
+      // Init colorpicker if available (PS 8.x only)
+      // Falls back to plain text input on PS 1.7.x
+      if (typeof $.fn.colorpicker === 'function') {
+        $('.js-color-picker').each(function() {
+          $(this).colorpicker();
+        });
+      }
     });
   </script>
 {% endblock %}

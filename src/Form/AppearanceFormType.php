@@ -28,7 +28,6 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-use PrestaShopBundle\Form\Admin\Type\ColorPickerType;
 use PrestaShopBundle\Form\Admin\Type\SwitchType;
 use PrestaShopBundle\Form\Admin\Type\TranslatorAwareType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -41,20 +40,32 @@ class AppearanceFormType extends TranslatorAwareType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('primary_color', ColorPickerType::class, [
+            ->add('primary_color', TextType::class, [
                 'label' => $this->trans('Primary Color', 'Modules.Askdialog.Admin'),
                 'help' => $this->trans('Main color for buttons and accents', 'Modules.Askdialog.Admin'),
                 'required' => false,
+                'attr' => [
+                    'class' => 'js-color-picker',
+                    'placeholder' => '#CCCCCC',
+                ],
             ])
-            ->add('background_color', ColorPickerType::class, [
+            ->add('background_color', TextType::class, [
                 'label' => $this->trans('Background Color', 'Modules.Askdialog.Admin'),
                 'help' => $this->trans('Background color for the dialog widget', 'Modules.Askdialog.Admin'),
                 'required' => false,
+                'attr' => [
+                    'class' => 'js-color-picker',
+                    'placeholder' => '#FFFFFF',
+                ],
             ])
-            ->add('cta_text_color', ColorPickerType::class, [
+            ->add('cta_text_color', TextType::class, [
                 'label' => $this->trans('CTA Text Color', 'Modules.Askdialog.Admin'),
                 'help' => $this->trans('Text color for call-to-action buttons', 'Modules.Askdialog.Admin'),
                 'required' => false,
+                'attr' => [
+                    'class' => 'js-color-picker',
+                    'placeholder' => '#000000',
+                ],
             ])
             ->add('cta_border_type', ChoiceType::class, [
                 'label' => $this->trans('CTA Border Type', 'Modules.Askdialog.Admin'),
