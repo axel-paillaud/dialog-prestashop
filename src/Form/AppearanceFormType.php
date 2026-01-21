@@ -28,65 +28,33 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
+use PrestaShopBundle\Form\Admin\Type\ColorPickerType;
 use PrestaShopBundle\Form\Admin\Type\SwitchType;
 use PrestaShopBundle\Form\Admin\Type\TranslatorAwareType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Constraints\Length;
 
 class AppearanceFormType extends TranslatorAwareType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('primary_color', TextType::class, [
+            ->add('primary_color', ColorPickerType::class, [
                 'label' => $this->trans('Primary Color', 'Modules.Askdialog.Admin'),
-                'help' => $this->trans('Main color for buttons and accents (hex format: #RRGGBB)', 'Modules.Askdialog.Admin'),
+                'help' => $this->trans('Main color for buttons and accents', 'Modules.Askdialog.Admin'),
                 'required' => false,
-                'constraints' => [
-                    new Assert\Regex([
-                        'pattern' => '/^#[0-9A-Fa-f]{6}$/',
-                        'message' => $this->trans('Please enter a valid hex color (e.g., #CCCCCC)', 'Modules.Askdialog.Admin'),
-                    ]),
-                ],
-                'attr' => [
-                    'class' => 'color-picker',
-                    'placeholder' => '#CCCCCC',
-                    'maxlength' => 7,
-                ],
             ])
-            ->add('background_color', TextType::class, [
+            ->add('background_color', ColorPickerType::class, [
                 'label' => $this->trans('Background Color', 'Modules.Askdialog.Admin'),
-                'help' => $this->trans('Background color for the dialog widget (hex format: #RRGGBB)', 'Modules.Askdialog.Admin'),
+                'help' => $this->trans('Background color for the dialog widget', 'Modules.Askdialog.Admin'),
                 'required' => false,
-                'constraints' => [
-                    new Assert\Regex([
-                        'pattern' => '/^#[0-9A-Fa-f]{6}$/',
-                        'message' => $this->trans('Please enter a valid hex color (e.g., #FFFFFF)', 'Modules.Askdialog.Admin'),
-                    ]),
-                ],
-                'attr' => [
-                    'class' => 'color-picker',
-                    'placeholder' => '#FFFFFF',
-                    'maxlength' => 7,
-                ],
             ])
-            ->add('cta_text_color', TextType::class, [
+            ->add('cta_text_color', ColorPickerType::class, [
                 'label' => $this->trans('CTA Text Color', 'Modules.Askdialog.Admin'),
-                'help' => $this->trans('Text color for call-to-action buttons (hex format: #RRGGBB)', 'Modules.Askdialog.Admin'),
+                'help' => $this->trans('Text color for call-to-action buttons', 'Modules.Askdialog.Admin'),
                 'required' => false,
-                'constraints' => [
-                    new Assert\Regex([
-                        'pattern' => '/^#[0-9A-Fa-f]{6}$/',
-                        'message' => $this->trans('Please enter a valid hex color (e.g., #000000)', 'Modules.Askdialog.Admin'),
-                    ]),
-                ],
-                'attr' => [
-                    'class' => 'color-picker',
-                    'placeholder' => '#000000',
-                    'maxlength' => 7,
-                ],
             ])
             ->add('cta_border_type', ChoiceType::class, [
                 'label' => $this->trans('CTA Border Type', 'Modules.Askdialog.Admin'),
@@ -110,7 +78,7 @@ class AppearanceFormType extends TranslatorAwareType
                 'help' => $this->trans('CSS font family for the dialog widget (e.g., Arial, sans-serif)', 'Modules.Askdialog.Admin'),
                 'required' => false,
                 'constraints' => [
-                    new Assert\Length([
+                    new Length([
                         'max' => 255,
                         'maxMessage' => $this->trans('Font family cannot be longer than {{ limit }} characters', 'Modules.Askdialog.Admin'),
                     ]),
