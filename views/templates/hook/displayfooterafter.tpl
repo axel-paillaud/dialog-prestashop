@@ -60,6 +60,9 @@
 
 <div id="dialog-script" data-src="{$index_dot_js_cdn_url}"></div>
 
+{* Load Dialog SDK with type="module" to prevent global scope pollution *}
+<script type="module" src="{$index_dot_js_cdn_url}"></script>
+
 <script>
     Object.assign(window, {
         DIALOG_VARIABLES: {

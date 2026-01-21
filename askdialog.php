@@ -186,12 +186,7 @@ class AskDialog extends Module
             );
         }
 
-        // index.js - all pages (main Dialog SDK from CDN)
-        $this->context->controller->registerJavascript(
-            'module-askdialog-index',
-            self::DIALOG_SDK_CDN_URL,
-            $jsParams
-        );
+        // index.js - loaded directly in displayfooterafter.tpl with type="module"
 
         // cart-integration.js - PrestaShop-specific cart integration (must stay local)
         $this->context->controller->registerJavascript(
