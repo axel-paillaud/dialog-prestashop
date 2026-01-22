@@ -661,6 +661,7 @@ class ProductExportService
         // Create new file if needed (NDJSON format: .ndjson extension)
         if ($tmpFilePath === null) {
             $tmpFilePath = PathHelper::generateTmpFilePath('catalog', 'ndjson');
+            Logger::log('[AskDialog] ProductExport::processResumableBatch: Created NDJSON file: ' . $tmpFilePath, 1);
         }
 
         // Get products to process (from offset)
@@ -693,7 +694,11 @@ class ProductExportService
 
             // Append to file (atomic write for this batch)
             if (!empty($ndjsonLines)) {
-                file_put_contents($tmpFilePath, $ndjsonLines, FILE_APPEND | LOCK_EX);
+                $bytesWritten = file_put_contents($tmpFilePath, $ndjsonLines, FILE_APPEND | LOCK_EX);
+                if ($bytesWritten === false) {
+                    Logger::log('[AskDialog] ProductExport::processResumableBatch: ERROR - Failed to append to NDJSON file: ' . $tmpFilePath, 3);
+                    throw new \Exception('Failed to append to NDJSON file: ' . $tmpFilePath);
+                }
             }
 
             // Free memory
