@@ -39,13 +39,19 @@ class PathHelper
      * Creates directory if it doesn't exist
      *
      * @return string Absolute path to tmp directory (with trailing slash)
+     *
+     * @throws \Exception If directory creation fails
      */
     public static function getTmpDir(): string
     {
         $dir = _PS_ROOT_DIR_ . '/var/modules/askdialog/tmp/';
 
         if (!file_exists($dir)) {
-            mkdir($dir, 0775, true);
+            if (!mkdir($dir, 0775, true)) {
+                Logger::log('[AskDialog] PathHelper::getTmpDir: ERROR - Failed to create directory: ' . $dir, 3);
+                throw new \Exception('Failed to create directory: ' . $dir . ' - check permissions on /var/modules/');
+            }
+            Logger::log('[AskDialog] PathHelper::getTmpDir: Created directory: ' . $dir, 1);
         }
 
         return $dir;
@@ -56,13 +62,19 @@ class PathHelper
      * Creates directory if it doesn't exist
      *
      * @return string Absolute path to sent directory (with trailing slash)
+     *
+     * @throws \Exception If directory creation fails
      */
     public static function getSentDir(): string
     {
         $dir = _PS_ROOT_DIR_ . '/var/modules/askdialog/sent/';
 
         if (!file_exists($dir)) {
-            mkdir($dir, 0775, true);
+            if (!mkdir($dir, 0775, true)) {
+                Logger::log('[AskDialog] PathHelper::getSentDir: ERROR - Failed to create directory: ' . $dir, 3);
+                throw new \Exception('Failed to create directory: ' . $dir . ' - check permissions on /var/modules/');
+            }
+            Logger::log('[AskDialog] PathHelper::getSentDir: Created directory: ' . $dir, 1);
         }
 
         return $dir;
@@ -73,13 +85,19 @@ class PathHelper
      * Creates directory if it doesn't exist
      *
      * @return string Absolute path to cache directory (with trailing slash)
+     *
+     * @throws \Exception If directory creation fails
      */
     public static function getCacheDir(): string
     {
         $dir = _PS_ROOT_DIR_ . '/var/modules/askdialog/cache/';
 
         if (!file_exists($dir)) {
-            mkdir($dir, 0775, true);
+            if (!mkdir($dir, 0775, true)) {
+                Logger::log('[AskDialog] PathHelper::getCacheDir: ERROR - Failed to create directory: ' . $dir, 3);
+                throw new \Exception('Failed to create directory: ' . $dir . ' - check permissions on /var/modules/');
+            }
+            Logger::log('[AskDialog] PathHelper::getCacheDir: Created directory: ' . $dir, 1);
         }
 
         return $dir;
