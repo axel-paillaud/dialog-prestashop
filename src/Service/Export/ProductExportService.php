@@ -731,6 +731,7 @@ class ProductExportService
         Logger::log('[AskDialog] ProductExport::convertNdjsonToJson: START', 1);
 
         if (!file_exists($ndjsonFilePath)) {
+            Logger::log('[AskDialog] ProductExport::convertNdjsonToJson: ERROR - NDJSON file not found: ' . $ndjsonFilePath, 3);
             throw new \Exception('NDJSON file not found: ' . $ndjsonFilePath);
         }
 
@@ -738,6 +739,7 @@ class ProductExportService
         $products = [];
         $handle = fopen($ndjsonFilePath, 'r');
         if ($handle === false) {
+            Logger::log('[AskDialog] ProductExport::convertNdjsonToJson: ERROR - Failed to open NDJSON file: ' . $ndjsonFilePath, 3);
             throw new \Exception('Failed to open NDJSON file');
         }
 
@@ -759,11 +761,13 @@ class ProductExportService
         $jsonContent = json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         if ($jsonContent === false) {
+            Logger::log('[AskDialog] ProductExport::convertNdjsonToJson: ERROR - JSON encoding failed: ' . json_last_error_msg(), 3);
             throw new \Exception('JSON encoding failed: ' . json_last_error_msg());
         }
 
         $bytesWritten = file_put_contents($finalFilePath, $jsonContent);
         if ($bytesWritten === false) {
+            Logger::log('[AskDialog] ProductExport::convertNdjsonToJson: ERROR - Failed to write final JSON file: ' . $finalFilePath, 3);
             throw new \Exception('Failed to write final JSON file');
         }
 
