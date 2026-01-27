@@ -27,6 +27,7 @@ if (!defined('_PS_VERSION_')) {
 }
 
 use Dialog\AskDialog\Helper\Logger;
+use Dialog\AskDialog\Helper\PathHelper;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
@@ -165,8 +166,8 @@ class AskDialogClient
             throw new \Exception('File not found: ' . $filePath);
         }
 
-        $fileSize = round(filesize($filePath) / 1024 / 1024, 2);
-        Logger::info('[AskDialog] AskDialogClient::uploadFileToS3: Uploading ' . $filename . ' (' . $fileSize . 'MB)...');
+        $fileSize = PathHelper::formatFileSize(filesize($filePath));
+        Logger::info('[AskDialog] AskDialogClient::uploadFileToS3: Uploading ' . $filename . ' (' . $fileSize . ')...');
 
         // Use a separate client for S3 (no base_uri, no auth headers)
         $s3Client = HttpClient::create(['verify_peer' => false]);

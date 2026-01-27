@@ -54,7 +54,7 @@ class GzipHelper
 
         $gzipPath = $sourcePath . '.gz';
         $originalSize = filesize($sourcePath);
-        Logger::info('[AskDialog] GzipHelper: Compressing ' . basename($sourcePath) . ' (' . round($originalSize / 1024 / 1024, 2) . 'MB)...');
+        Logger::info('[AskDialog] GzipHelper: Compressing ' . basename($sourcePath) . ' (' . PathHelper::formatFileSize($originalSize) . ')...');
 
         $source = fopen($sourcePath, 'rb');
         if ($source === false) {
@@ -90,8 +90,8 @@ class GzipHelper
         $ratio = $originalSize > 0 ? round((1 - $compressedSize / $originalSize) * 100, 1) : 0;
         Logger::info(
             '[AskDialog] GzipHelper: Compressed ' . basename($sourcePath)
-            . ' (' . round($originalSize / 1024 / 1024, 2) . 'MB'
-            . ' → ' . round($compressedSize / 1024 / 1024, 2) . 'MB'
+            . ' (' . PathHelper::formatFileSize($originalSize)
+            . ' → ' . PathHelper::formatFileSize($compressedSize)
             . ', -' . $ratio . '%)'
         );
 
