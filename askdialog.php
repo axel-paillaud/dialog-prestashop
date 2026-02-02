@@ -88,6 +88,8 @@ class AskDialog extends Module
             && $this->registerHook('displayFooterAfter')
             && $this->registerHook('displayProductAdditionalInfo')
             && $this->registerHook('displayOrderConfirmation')
+            && $this->registerHook('actionCartUpdateQuantityBefore')
+            && $this->registerHook('actionValidateOrder')
             && Configuration::updateValue('ASKDIALOG_API_URL', self::DIALOG_API_URL)
             && Configuration::updateValue('ASKDIALOG_BATCH_SIZE', 5000)
             && Configuration::updateValue('ASKDIALOG_ENABLE_LOGS', false);
