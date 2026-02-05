@@ -91,8 +91,7 @@ class GeneralFormType extends TranslatorAwareType
                     new Assert\Range([
                         'min' => 100,
                         'max' => 50000,
-                        'minMessage' => $this->trans('Batch size must be at least {{ limit }}', 'Modules.Askdialog.Admin'),
-                        'maxMessage' => $this->trans('Batch size must be at most {{ limit }}', 'Modules.Askdialog.Admin'),
+                        'notInRangeMessage' => $this->trans('Batch size must be between {{ min }} and {{ max }}', 'Modules.Askdialog.Admin'),
                     ]),
                 ],
                 'attr' => [
