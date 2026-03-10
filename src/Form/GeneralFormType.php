@@ -88,11 +88,13 @@ class GeneralFormType extends TranslatorAwareType
                 'help' => $this->trans('Number of products to process per batch during catalog export. Lower values reduce memory usage and timeout risk on large catalogs. Default: 5000', 'Modules.Askdialog.Admin'),
                 'required' => false,
                 'constraints' => [
-                    new Assert\Range([
-                        'min' => 100,
-                        'max' => 50000,
-                        'minMessage' => $this->trans('Batch size must be at least {{ limit }}', 'Modules.Askdialog.Admin'),
-                        'maxMessage' => $this->trans('Batch size must not exceed {{ limit }}', 'Modules.Askdialog.Admin'),
+                    new Assert\GreaterThanOrEqual([
+                        'value' => 100,
+                        'message' => $this->trans('Batch size must be at least 100', 'Modules.Askdialog.Admin'),
+                    ]),
+                    new Assert\LessThanOrEqual([
+                        'value' => 50000,
+                        'message' => $this->trans('Batch size must not exceed 50000', 'Modules.Askdialog.Admin'),
                     ]),
                 ],
                 'attr' => [
